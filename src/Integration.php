@@ -105,9 +105,16 @@ class Integration {
         }
 
         $categories = explode('/',$product['category']);
+        $product_categories = [];
+        $main_category = $parent_category_id = 0;
         foreach ($categories as $category) {
           $category = trim($category);
-
+          if (!empty($category)) {
+            $category_id = $this->oc->getCategoryId($category, $parent_category_id, true);
+            $product_categories[] = $category;
+            $main_category = $category_id;
+            $parent_category_id = $category_id;
+          }
         }
       }
     }
