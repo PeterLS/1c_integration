@@ -1,0 +1,31 @@
+{
+  "name": "peterls/1c_integration",
+  "description": "Integration with 1C (XML)",
+  "keywords": [
+    "peterls",
+    "1c_integration"
+  ],
+  "version": "1.0.0",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Petr Slobodyanyuk",
+      "email": "support@web-kiborg.ru"
+    }
+  ],
+  "minimum-stability": "stable",
+  "require": {
+    "php": ">=7.0.32",
+    "ext-mbstring": "*",
+    "ext-curl": "*",
+    "ext-simplexml": "*",
+    "ext-zip": "*",
+    "ext-pdo": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "PeterLS\\Integration\\": "src/",
+      "PeterLS\\crm\\": "src/crm/"
+    }
+  }
+}
