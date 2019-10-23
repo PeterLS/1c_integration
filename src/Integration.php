@@ -15,6 +15,7 @@ class Integration {
   private $import_dir = NULL;
   private $image_dir = NULL;
   private $default_image = '';
+  private $default_pirce_type = 'Розничная';
 
   private $db_params = ['host' => 'localhost', 'name' => '', 'user' => 'root', 'password' => '', 'port' => 0];
 
@@ -60,16 +61,14 @@ class Integration {
     return false;
   }
 
-  private function load($xml_file): bool {
+  private function load($xml_file) {
     ini_set("memory_limit", "512M");
     ini_set("max_execution_time", 36000);
 
     $contents = file_get_contents($xml_file);
     $xml = new SimpleXMLElement($contents);
 
-    if (empty($xml->Goods->Item)) {
-
-    } else {
+    if (!empty($xml->Goods->Item)) {
       $all_images = $this->getImages();
       foreach ($xml->Goods->Item as $item) {
         foreach ($item->attributes() as $k => $v) {
@@ -94,33 +93,43 @@ class Integration {
         }
 
         $product['filters'] = [];
-        foreach($item->filters->filter as $filter) {
+        foreach ($item->filters->filter as $filter) {
           $filter = $filter->attributes();
-          $product['filters'][(string)$filter['filtername']] = (string)$filter['filtervalue'];
+          $product['filters'][] = $this->oc->getFilterId($filter['filtername'], $filter['filtervalue'], true);
         }
 
-        foreach($item->Prices->price as $price) {
-          $price = $price->attributes();
-          $product[(string)$price['pricename']] = (string)$price['pricevalue'];
+        $product['price'] = 0;
+        if ($product['showprice'] == 'true') {
+          foreach ($item->Prices->price as $price) {
+            $price = $price->attributes();
+            if ($price['pricename'] == $this->default_pirce_type) {
+              $product['price'] = (string)$price['pricevalue'];
+            }
+          }
         }
 
-        $categories = explode('/',$product['category']);
+        $categories = explode('/', $product['category']);
         $product_categories = [];
-        $main_category = $parent_category_id = 0;
+        $main_category_id = $parent_category_id = 0;
         foreach ($categories as $category) {
           $category = trim($category);
           if (!empty($category)) {
             $category_id = $this->oc->getCategoryId($category, $parent_category_id, true);
-            $product_categories[] = $category;
-            $main_category = $category_id;
+            $product_categories[] = $category_id;
+            $main_category_id = $category_id;
             $parent_category_id = $category_id;
           }
+        }
+
+        if (empty($product_data['id'])) {
+          $this->oc->addProduct($product);
+        } else {
+          $this->oc->updateProduct($product_data['id'], $product);
         }
       }
     }
 
-
-    return true;
+    $this->setXmlSuccess();
   }
 
   /**
@@ -225,6 +234,13 @@ class Integration {
   }
 
   /**
+   * @param string $default_pirce_type
+   */
+  public function setDefaultPirceType(string $default_pirce_type) {
+    $this->default_pirce_type = $default_pirce_type;
+  }
+
+  /**
    * @param string $dir
    * @param string $file_type
    * @return bool|mixed
@@ -278,10 +294,18 @@ class Integration {
    */
   private function setXmlError(string $string) {
     $string = str_replace('"', '', $string);
-    $xml_str = '<?xml version="1.0" encoding="UTF-8"?><error descr="' . $string . '">1</error>';
-    $xml_class = new SimpleXMLElement($xml_str);
-    echo $xml_class->asXML();
+    echo $this->printXML('<?xml version="1.0" encoding="UTF-8"?><error descr="' . $string . '">1</error>');
     exit();
+  }
+
+  private function setXmlSuccess() {
+    echo $this->printXML('<?xml version="1.0" encoding="UTF-8"?><error descr="">0</error>');
+    exit();
+  }
+
+  private function printXML(string $data): string {
+    $xml_class = new SimpleXMLElement($data);
+    return $xml_class->asXML();
   }
 
   /**

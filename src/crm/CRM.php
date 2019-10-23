@@ -14,16 +14,16 @@ interface CRM {
 
   /**
    * @param int $id - идентификатор продукта
-   * @param array $data - поля, которые нужно обновить
-   * @return bool
+   * @param array $data
+   * @return void
    */
-  public function updateProduct(int $id, array $data): bool;
+  public function updateProduct(int $id, array $data);
 
   /**
-   * @param array $data - данные добавляемого продукта
-   * @return int - идентификатор добавленного продукта
+   * @param array $data
+   * @return void
    */
-  public function addProduct(array $data): int;
+  public function addProduct(array $data);
 
   /**
    * @param string $name - наименование категории
@@ -32,4 +32,6 @@ interface CRM {
    * @return int
    */
   public function getCategoryId(string $name, int $parent_id = 0, bool $add_if_empty = false): int;
+
+  public function getFilterId(string $filter_group_name, string $filter_name, bool $add_if_empty = false): int;
 }
