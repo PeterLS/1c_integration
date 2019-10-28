@@ -221,14 +221,14 @@ class Integration {
    * @param string $export_dir
    */
   public function setExportDir(string $export_dir) {
-    $this->export_dir = $export_dir;
+    $this->export_dir = $this->replaceSlashes($export_dir);
   }
 
   /**
    * @param string $import_dir
    */
   public function setImportDir(string $import_dir) {
-    $this->import_dir = $import_dir;
+    $this->import_dir = $this->replaceSlashes($import_dir);
   }
 
   /**
@@ -266,6 +266,7 @@ class Integration {
    */
   private function getLastFile(string $dir, string $file_type) {
     $lm = $fn = [];
+    $dir = $this->replaceSlashes($dir);
 
     $open_dir = opendir($dir);
     if ($open_dir === false) {
@@ -300,6 +301,10 @@ class Integration {
         }
       }
     }
+  }
+
+  private function replaceSlashes($path, $separator = DIRECTORY_SEPARATOR) {
+    return str_replace('/', $separator, $path);
   }
 
   /**
