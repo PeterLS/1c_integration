@@ -61,8 +61,11 @@ class OpenCart implements CRM {
           $product_data['status'] = ($v == 'true' ? 1 : 0);
           break;
         case 'price':
-        case 'image':
           $product_data[$k] = $v;
+          break;
+        case 'image':
+          $image = implode('/image/', $product_data[$k]);
+          $product_data[$k] = $image[count($image)-1];
           break;
       }
     }
@@ -74,8 +77,15 @@ class OpenCart implements CRM {
       $product_data['date_modified'] = date('Y-m-d H:i:s');
 
       $sql = "UPDATE oc_product SET ";
+      $count = 1;
       foreach ($product_data as $k => $v) {
         $sql .= "`$k` = :$k ";
+        if ($count == count($product_data)) {
+          $sql .= ' ';
+        } else {
+          $sql .= ', ';
+        }
+        $count++;
       }
       $sql .= "WHERE product_id = :product_id";
 
