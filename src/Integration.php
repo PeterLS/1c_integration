@@ -75,6 +75,8 @@ class Integration {
           $product[$k] = (string)$v;
         }
 
+        $product['description'] = htmlspecialchars(str_replace('$', '<br/>', $product['description']));
+
         $code = explode('-', $product['code']);
         $product['code'] = $code[count($code)-1];
         unset($code);
