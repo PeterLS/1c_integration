@@ -30,13 +30,15 @@ class OpenCart implements CRM {
     $row = ($STH->fetchAll(PDO::FETCH_ASSOC));
     if (empty($row)) {
       return [];
-    } else {
+    }
+    else {
       $row = $row[0];
     }
 
     if (empty($data)) {
       return $row;
-    } else {
+    }
+    else {
       $result = [];
       foreach ($row as $k => $v) {
         if (in_array($k, $data)) {
@@ -65,7 +67,7 @@ class OpenCart implements CRM {
           break;
         case 'image':
           $image = explode('/image/', $data[$k]);
-          $product_data[$k] = $image[count($image)-1];
+          $product_data[$k] = $image[count($image) - 1];
           unset($image);
           break;
       }
@@ -83,7 +85,8 @@ class OpenCart implements CRM {
         $sql .= "`$k` = :$k ";
         if ($count == count($product_data)) {
           $sql .= ' ';
-        } else {
+        }
+        else {
           $sql .= ', ';
         }
         $count++;
@@ -127,39 +130,25 @@ class OpenCart implements CRM {
     if (!empty($data['main_category_id'])) {
       $STH = $this->db->prepare("INSERT IGNORE INTO oc_product_to_category (product_id, category_id) VALUES (:product_id, :main_category_id)");
       $STH->execute([
-        ':product_id' => $id,
-        ':main_category_id' => $data['main_category_id']
+        ':product_id' => $id, ':main_category_id' => $data['main_category_id']
       ]);
     }
   }
 
   public function addProduct(array $data) {
     $image = explode('/image/', $data['image']);
-    $data['image'] = $image[count($image)-1];
+    $data['image'] = $image[count($image) - 1];
     unset($image);
     $STH = $this->db->prepare("INSERT INTO oc_product SET model = :model, sku = :sku, upc = '', ean = '', jan = '', isbn = '', mpn = '', location = '', quantity = :quantity, stock_status_id = :stock_status_id, image = :image, manufacturer_id = 0, price = :price, tax_class_id = 0, status = 1, date_added = current_date, date_modified = current_date");
-    $STH->execute([
-      ':model' => $data['code'],
-      ':sku' => $data['guid'],
-      ':quantity' => $data['stock'],
-      ':stock_status_id' => $this->getStockStatus($data['stock']),
-      ':image' => $data['image'],
-      ':price' => $data['price']
-    ]);
+    $STH->execute([':model' => $data['code'], ':sku' => $data['guid'], ':quantity' => $data['stock'], ':stock_status_id' => $this->getStockStatus($data['stock']), ':image' => $data['image'], ':price' => $data['price']]);
     $product_id = $this->db->lastInsertId('product_id');
 
     $STH = $this->db->prepare("INSERT INTO oc_product_description SET product_id = :product_id, language_id = :language_id, `name` = :product_name, `description` = :product_description, tag = '', meta_title = '', meta_description = '', meta_keyword = ''");
-    $STH->execute([
-      ':product_id' => $product_id,
-      ':language_id' => $this->default_language_id,
-      ':product_name' => $data['name'],
-      ':product_description' => $data['description']
-    ]);
+    $STH->execute([':product_id' => $product_id, ':language_id' => $this->default_language_id, ':product_name' => $data['name'], ':product_description' => $data['description']]);
 
     $STH = $this->db->prepare("INSERT INTO oc_product_to_category SET product_id = :product_id, category_id = :category_id");
     $STH->execute([
-      ':product_id' => $product_id,
-      ':category_id' => $data['main_category_id']
+      ':product_id' => $product_id, ':category_id' => $data['main_category_id']
     ]);
 
     if (!empty($data['filters'])) {
@@ -168,6 +157,9 @@ class OpenCart implements CRM {
         $STH->execute([':product_id' => $product_id, ':filter_id' => $filter_id]);
       }
     }
+
+    $STH = $this->db->prepare("INSERT INTO oc_product_to_store SET product_id = :product_id, store_id = 0");
+    $STH->execute([':product_id' => $product_id]);
   }
 
   /**
@@ -176,7 +168,7 @@ class OpenCart implements CRM {
    * @param bool $add_if_empty - добавить, если категория не существует
    * @return int
    */
-  public function getCategoryId(string $name, int $parent_id = 0, bool $add_if_empty = false): int {
+  public function getCategoryId(string $name, int $parent_id = 0, bool $add_if_empty = FALSE): int {
     $STH = $this->db->prepare("SELECT cd.category_id AS id FROM oc_category c, oc_category_description cd WHERE cd.category_id = c.category_id AND LOWER(cd.name) = LOWER(:category_name) AND c.parent_id = :parent_id LIMIT 1");
     $STH->execute([':category_name' => $name, ':parent_id' => $parent_id]);
     $row = $STH->fetchAll(PDO::FETCH_ASSOC);
@@ -189,10 +181,12 @@ class OpenCart implements CRM {
         $STH->execute([':category_id' => $last_insert_id, ':category_name' => $name, ':language_id' => $this->default_language_id]);
 
         return $last_insert_id;
-      } else {
+      }
+      else {
         return 0;
       }
-    } else {
+    }
+    else {
       return intval($row[0]['id']);
     }
   }
@@ -203,7 +197,7 @@ class OpenCart implements CRM {
    * @param bool $add_if_empty - добавлять группу/фильтр если отсутствует
    * @return int
    */
-  public function getFilterId(string $filter_group_name, string $filter_name, bool $add_if_empty = false): int {
+  public function getFilterId(string $filter_group_name, string $filter_name, bool $add_if_empty = FALSE): int {
     $STH = $this->db->prepare("SELECT filter_group_id FROM oc_filter_group_description WHERE `name` = :filter_group_name LIMIT 1");
     $STH->execute([':filter_group_name' => $filter_group_name]);
     $filter_group = $STH->fetchAll(PDO::FETCH_ASSOC);
@@ -214,10 +208,12 @@ class OpenCart implements CRM {
         $STH = $this->db->prepare("INSERT INTO oc_filter_group_description VALUES (:filter_group_id, :language_id, :filter_name)");
         $STH->execute([':filter_group_id' => $last_insert_id, ':filter_name' => $filter_name, ':language_id' => $this->default_language_id]);
         $filter_group_id = $this->db->lastInsertId('filter_group_id');
-      } else {
+      }
+      else {
         return 0;
       }
-    } else {
+    }
+    else {
       $filter_group_id = $filter_group[0]['$filter_group_id'];
     }
 
@@ -233,10 +229,12 @@ class OpenCart implements CRM {
         $STH->execute([':filter_id' => $filter_id, ':filter_group_id' => $filter_group_id, ':filter_name' => $filter_name, ':language_id' => $this->default_language_id]);
 
         return $filter_id;
-      } else {
+      }
+      else {
         return 0;
       }
-    } else {
+    }
+    else {
       return $filter[0]['filter_id'];
     }
   }
@@ -271,7 +269,8 @@ class OpenCart implements CRM {
   private function getStockStatus(int $quantity): int {
     if ($quantity > 0) {
       return $this->stock_statuses['true'];
-    } else {
+    }
+    else {
       return $this->stock_statuses['false'];
     }
   }
