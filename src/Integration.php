@@ -281,7 +281,7 @@ class Integration {
         $ext = explode('.', $filename);
 
         if ($ext[1] == $file_type) {
-          $lastModified = filemtime("{$dir}{$filename}");
+          $lastModified = filemtime("{$dir}/{$filename}");
           $lm[] = $lastModified;
           $fn[] = $filename;
         }
@@ -291,7 +291,7 @@ class Integration {
         array_multisort($lm, SORT_NUMERIC, SORT_ASC, $fn);
         $last_index = count($lm) - 1;
 
-        return $dir . $fn[$last_index];
+        return $dir . '/' . $fn[$last_index];
       } else {
         if ($file_type === 'zip') {
           $this->setError('Отсутствует ZIP-архив.');
