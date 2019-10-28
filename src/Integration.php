@@ -74,16 +74,20 @@ class Integration {
         foreach ($item->attributes() as $k => $v) {
           $product[$k] = (string)$v;
         }
+
+        $code = explode('-', $product['code']);
+        $product['code'] = $code[count($code)-1];
+        unset($code);
+
         $product['image'] = $this->default_image;
 
-        $image_sn = explode('-', $product['image'])[1] * 1;
-        if (isset($all_images[$image_sn])) {
+        if (isset($all_images[$product['code']])) {
           if ($product['isactive'] == 'false') {
-            unlink($this->image_dir . $all_images[$image_sn]);
+            unlink($all_images[$product['code']]);
           } else {
-            $product['image'] = $this->image_dir . $all_images[$image_sn];
+            $product['image'] = $all_images[$product['code']];
           }
-          unset($all_images[$image_sn]);
+          unset($all_images[$product['code']]);
         }
 
         $product_data = $this->oc->getProductData($product['code'], ['id', 'status', 'price', 'sku', 'quantity', 'price']);
@@ -156,7 +160,6 @@ class Integration {
    */
   private function getImages(): array {
     $fn = [];
-    $open_dir = opendir($this->image_dir);
     if (($open_dir = opendir($this->image_dir)) !== false) {
       while (($filename = readdir($open_dir)) !== false) {
         if ($filename == '.' || $filename == '..' || $filename == 'current') {
@@ -170,18 +173,17 @@ class Integration {
         } else {
           $new_name = $filename;
         }
-
         $fname = explode('.', $new_name);
         if (file_exists($this->image_dir . '/' . $fname[0] . '.jpg') && file_exists($this->image_dir . '/' . $fname[0] . '.png')) {
-          if (filectime($this->image_dir . $fname[0] . '.jpg') > filectime($this->image_dir . $fname[0] . '.png')) {
-            unlink($this->image_dir . $fname[0] . '.png');
-            $fn[$fname[0] * 1] = $fname[0] . '.jpg';
+          if (filectime($this->image_dir . '/' . $fname[0] . '.jpg') > filectime($this->image_dir . '/' . $fname[0] . '.png')) {
+            unlink($this->image_dir . '/' . $fname[0] . '.png');
+            $fn[$fname[0]] = $this->image_dir . '/' . $fname[0] . '.jpg';
           } else {
-            unlink($this->image_dir . $fname[0] . '.jpg');
-            $fn[$fname[0] * 1] = $fname[0] . '.png';
+            unlink($this->image_dir . '/' . $fname[0] . '.jpg');
+            $fn[$fname[0]] = $this->image_dir . '/' . $fname[0] . '.png';
           }
         } else {
-          $fn[$fname[0] * 1] = $new_name;
+          $fn[$fname[0]] = $this->image_dir . '/' . $new_name;
         }
       }
     }
