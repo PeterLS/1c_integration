@@ -293,6 +293,7 @@ class Integration {
         return $dir . $fn[$last_index];
       } else {
         if ($file_type === 'zip') {
+          $this->setError('Отсутствует ZIP-архив.');
           return false;
         } else {
           $this->setXmlError('Отсутствует файл выгрузки');
