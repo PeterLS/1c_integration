@@ -37,7 +37,7 @@ class Integration {
       if ($sh_zip === true) {
         if ($zip->extractTo($this->image_dir) === TRUE) {
           $zip->close();
-          unlink($zip_file);
+          //unlink($zip_file);
 
           $xml_file = $this->getLastFile($this->import_dir, 'xml');
           if ($xml_file !== false) {
@@ -166,13 +166,13 @@ class Integration {
         $sn = explode('-', $filename);;
         if (isset($sn[1])) {
           $new_name = $sn[1];
-          rename($this->image_dir . $filename, $this->image_dir . $new_name);
+          rename($this->image_dir . '/' . $filename, $this->image_dir . '/' . $new_name);
         } else {
           $new_name = $filename;
         }
 
         $fname = explode('.', $new_name);
-        if (file_exists($this->image_dir . $fname[0] . '.jpg') && file_exists($this->image_dir . $fname[0] . '.png')) {
+        if (file_exists($this->image_dir . '/' . $fname[0] . '.jpg') && file_exists($this->image_dir . '/' . $fname[0] . '.png')) {
           if (filectime($this->image_dir . $fname[0] . '.jpg') > filectime($this->image_dir . $fname[0] . '.png')) {
             unlink($this->image_dir . $fname[0] . '.png');
             $fn[$fname[0] * 1] = $fname[0] . '.jpg';
