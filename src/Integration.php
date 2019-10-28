@@ -209,7 +209,7 @@ class Integration {
   public function setOc(string $oc): bool {
     try {
       $oc = 'PeterLS\\crm\\' . $oc;
-      $this->oc = new $oc();
+      $this->oc = new $oc($this->db_params);
       return true;
     } catch (Exception $e) {
       $this->setError($e);

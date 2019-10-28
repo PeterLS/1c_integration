@@ -6,6 +6,12 @@ namespace PeterLS\crm;
 
 interface CRM {
   /**
+   * CRM constructor.
+   * @param array $db_params - параметры базы данных
+   */
+  public function __construct(array $db_params);
+
+  /**
    * @param $ident - принимает код продукта из 1с
    * @param array $fields - необязательный; если заданы значения возвращает только запрошенные поля
    * @return array - массив с данными или пустой массив
