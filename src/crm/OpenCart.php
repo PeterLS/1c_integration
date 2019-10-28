@@ -25,7 +25,7 @@ class OpenCart implements CRM {
    * @return array
    */
   public function getProductData($model, array $data = []): array {
-    $STH = $this->db->prepare("SELECT *, product_id AS id FROM oc_product WHERE model = :model LIMIT 1");
+    $STH = $this->db->prepare("SELECT *, product_id AS id, sku AS guid, quantity AS stock FROM oc_product WHERE model = :model LIMIT 1");
     $STH->execute([':model' => $model]);
     $row = ($STH->fetchAll(PDO::FETCH_ASSOC));
     if (empty($row)) {
@@ -66,6 +66,7 @@ class OpenCart implements CRM {
         case 'image':
           $image = explode('/image/', $data[$k]);
           $product_data[$k] = $image[count($image)-1];
+          unset($image);
           break;
       }
     }
@@ -133,7 +134,40 @@ class OpenCart implements CRM {
   }
 
   public function addProduct(array $data) {
-    // TODO: Implement addProduct() method.
+    $image = explode('/image/', $data['image']);
+    $data['image'] = $image[count($image)-1];
+    unset($image);
+    $STH = $this->db->prepare("INSERT INTO oc_product SET model = :model, sku = :sku, upc = '', ean = '', jan = '', isbn = '', mpn = '', location = '', quantity = :quantity, stock_status_id = :stock_status_id, image = :image, manufacturer_id = 0, price = :price, tax_class_id = 0, status = 1, date_added = current_date, date_modified = current_date");
+    $STH->execute([
+      ':model' => $data['code'],
+      ':sku' => $data['guid'],
+      ':quantity' => $data['stock'],
+      ':stock_status_id' => $this->getStockStatus($data['stock']),
+      ':image' => $data['image'],
+      ':price' => $data['price']
+    ]);
+    $product_id = $this->db->lastInsertId('product_id');
+
+    $STH = $this->db->prepare("INSERT INTO oc_product_description SET product_id = :product_id, language_id = :language_id, `name` = :product_name, `description` = :product_description, tag = '', meta_title = '', meta_description = '', meta_keyword = ''");
+    $STH->execute([
+      ':product_id' => $product_id,
+      ':language_id' => $this->default_language_id,
+      ':product_name' => $data['name'],
+      ':product_description' => $data['description']
+    ]);
+
+    $STH = $this->db->prepare("INSERT INTO oc_product_to_category SET product_id = :product_id, category_id = :category_id");
+    $STH->execute([
+      ':product_id' => $product_id,
+      ':category_id' => $data['main_category_id']
+    ]);
+
+    if (!empty($data['filters'])) {
+      $STH = $this->db->prepare("INSERT INTO oc_product_filter VALUES (:product_id, :filter_id)");
+      foreach ($data['filters'] as $filter_id) {
+        $STH->execute([':product_id' => $product_id, ':filter_id' => $filter_id]);
+      }
+    }
   }
 
   /**

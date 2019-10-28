@@ -144,10 +144,10 @@ class Integration {
     if ($new_data['isactive'] == 'true' && !empty($old_data['status'])) {
       unset($new_data['isactive']);
     }
-    if ($new_data['guid'] == $old_data['sku']) {
+    if ($new_data['guid'] == $old_data['guid']) {
       unset($new_data['guid']);
     }
-    if (intval($new_data['stock']) == $old_data['quantity']) {
+    if (intval($new_data['stock']) == $old_data['stock']) {
       unset($new_data['stock']);
     }
     if ($new_data['price'] == $old_data['price']) {
