@@ -273,7 +273,7 @@ class Integration {
       $this->setError('Невозможно открыть директорию ' . $dir);
       return false;
     } else {
-      while (($filename = readdir($open_dir) !== false)) {
+      while (($filename = readdir($open_dir)) !== false) {
         if ($filename == '.' || $filename == '..' || $filename == 'current') {
           continue;
         }
