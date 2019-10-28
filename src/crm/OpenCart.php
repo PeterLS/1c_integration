@@ -7,9 +7,12 @@ use PDO;
 
 class OpenCart implements CRM {
   private $db = NULL;
+  private $stock_statuses = ['true' => 7, 'false' => 5];
+  private $default_language_id = 1;
 
   public function __construct(array $db_params) {
     $this->db = new PDO("mysql:host={$db_params['host']};dbname={$db_params['name']}", $db_params['user'], $db_params['password']);
+    $this->default_language_id = $this->getDefaultLanguage();
   }
 
   public function __destruct() {
@@ -45,7 +48,78 @@ class OpenCart implements CRM {
   }
 
   public function updateProduct(int $id, array $data) {
-    // TODO: Implement updateProduct() method.
+    $product_data = [];
+    foreach ($data as $k => $v) {
+      switch ($k) {
+        case 'guid':
+          $product_data['sku'] = $v;
+          break;
+        case 'stock':
+          $product_data['quantity'] = intval($v);
+          break;
+        case 'isactive':
+          $product_data['status'] = ($v == 'true' ? 1 : 0);
+          break;
+        case 'price':
+        case 'image':
+          $product_data[$k] = $v;
+          break;
+      }
+    }
+    if (!empty($product_data)) {
+      if (isset($product_data['quantity'])) {
+        $product_data['stock_status_id'] = $this->getStockStatus($product_data['quantity']);
+      }
+      $product_data['date_available'] = date('Y-m-d');
+      $product_data['date_modified'] = date('Y-m-d H:i:s');
+
+      $sql = "UPDATE oc_product SET ";
+      foreach ($product_data as $k => $v) {
+        $sql .= "`$k` = :$k ";
+      }
+      $sql .= "WHERE product_id = :product_id";
+
+      $product_data['product_id'] = $id;
+      $STH = $this->db->prepare($sql);
+      $STH->execute($product_data);
+    }
+    unset($product_data, $sql);
+
+    $product_description_data = [];
+    if (isset($data['name'])) {
+      $product_description_data['name'] = addslashes($data['name']);
+    }
+    if (isset($data['description'])) {
+      $product_description_data['description'] = addslashes($data['description']);
+    }
+
+    if (!empty($product_description_data)) {
+      $sql = "UPDATE oc_product_description SET ";
+      foreach ($product_description_data as $k => $v) {
+        $sql .= "`$k` = :$k ";
+      }
+      $sql .= "WHERE product_id = :product_id AND language_id = :language_id";
+
+      $product_description_data['product_id'] = $id;
+      $product_description_data['language_id'] = $this->default_language_id;
+      $STH = $this->db->prepare($sql)->execute($product_description_data);
+    }
+    unset($product_description_data);
+
+    if (!empty($data['filters'])) {
+      $STH = $this->db->prepare("INSERT IGNORE INTO oc_product_filter VALUES (:product_id, :filter_id)");
+      foreach ($data['filters'] as $filter_id) {
+        $STH->execute([':product_id' => $id, ':filter_id' => $filter_id]);
+      }
+    }
+
+    if (!empty($data['main_category_id'])) {
+      $STH = $this->db->prepare("INSERT IGNORE INTO oc_product_to_category (product_id, category_id) VALUES (:product_id, :main_category_id)");
+      $STH->execute([
+        ':product_id' => $id,
+        ':main_category_id' => $data['main_category_id']
+      ]);
+    }
   }
 
   public function addProduct(array $data) {
@@ -60,24 +134,15 @@ class OpenCart implements CRM {
    */
   public function getCategoryId(string $name, int $parent_id = 0, bool $add_if_empty = false): int {
     $STH = $this->db->prepare("SELECT cd.category_id AS id FROM oc_category c, oc_category_description cd WHERE cd.category_id = c.category_id AND LOWER(cd.name) = LOWER(:category_name) AND c.parent_id = :parent_id LIMIT 1");
-    $STH->execute([
-      ':category_name' => $name,
-      ':parent_id' => $parent_id
-    ]);
+    $STH->execute([':category_name' => $name, ':parent_id' => $parent_id]);
     $row = $STH->fetchAll(PDO::FETCH_ASSOC);
     if (empty($row)) {
       if ($add_if_empty) {
         $STH = $this->db->prepare("INSERT INTO oc_category (image, parent_id, top, `column`, `status`, date_added, date_modified) VALUES ('', :parent_id, 1, 1, 1, CURRENT_TIME, CURRENT_TIME)");
-        $STH->execute([
-          ':parent_id' => $parent_id
-        ]);
+        $STH->execute([':parent_id' => $parent_id]);
         $last_insert_id = $this->db->lastInsertId('category_id');
         $STH = $this->db->prepare("INSERT INTO oc_category_description (category_id, language_id, `name`) VALUES (:category_id, :language_id, :category_name)");
-        $STH->execute([
-          ':category_id' => $last_insert_id,
-          ':category_name' => $name,
-          ':language_id' => $this->getDefaultLanguage()
-        ]);
+        $STH->execute([':category_id' => $last_insert_id, ':category_name' => $name, ':language_id' => $this->default_language_id]);
 
         return $last_insert_id;
       } else {
@@ -96,20 +161,14 @@ class OpenCart implements CRM {
    */
   public function getFilterId(string $filter_group_name, string $filter_name, bool $add_if_empty = false): int {
     $STH = $this->db->prepare("SELECT filter_group_id FROM oc_filter_group_description WHERE `name` = :filter_group_name LIMIT 1");
-    $STH->execute([
-      ':filter_group_name' => $filter_group_name
-    ]);
+    $STH->execute([':filter_group_name' => $filter_group_name]);
     $filter_group = $STH->fetchAll(PDO::FETCH_ASSOC);
     if (empty($filter_group)) {
       if ($add_if_empty) {
         $this->db->exec("INSERT INTO oc_filter_group VALUES (NULL, 0)");
         $last_insert_id = $this->db->lastInsertId('filter_group_id');
         $STH = $this->db->prepare("INSERT INTO oc_filter_group_description VALUES (:filter_group_id, :language_id, :filter_name)");
-        $STH->execute([
-          ':filter_group_id' => $last_insert_id,
-          ':filter_name' => $filter_name,
-          ':language_id' => $this->getDefaultLanguage()
-        ]);
+        $STH->execute([':filter_group_id' => $last_insert_id, ':filter_name' => $filter_name, ':language_id' => $this->default_language_id]);
         $filter_group_id = $this->db->lastInsertId('filter_group_id');
       } else {
         return 0;
@@ -119,25 +178,15 @@ class OpenCart implements CRM {
     }
 
     $STH = $this->db->prepare("SELECT filter_id FROM oc_filter_description WHERE name = :filter_name AND filter_group_id = :filter_group_id LIMIT 1");
-    $STH->execute([
-      ':filter_name' => $filter_name,
-      ':filter_group_id' => $filter_group_id
-    ]);
+    $STH->execute([':filter_name' => $filter_name, ':filter_group_id' => $filter_group_id]);
     $filter = $STH->fetchAll(PDO::FETCH_ASSOC);
     if (empty($filter)) {
       if ($add_if_empty) {
         $STH = $this->db->prepare("INSERT INTO oc_filter (filter_group_id, sort_order) VALUES (:filter_group_id, 0)");
-        $STH->execute([
-          ':filter_group_id' => $filter_group_id
-        ]);
-        $filter_id =  $this->db->lastInsertId('filter_id');
+        $STH->execute([':filter_group_id' => $filter_group_id]);
+        $filter_id = $this->db->lastInsertId('filter_id');
         $STH = $this->db->prepare("INSERT INTO oc_filter_description VALUES (:filter_id, :language_id, :filter_group_id, :filter_name)");
-        $STH->execute([
-          ':filter_id' => $filter_id,
-          ':filter_group_id' => $filter_group_id,
-          ':filter_name' => $filter_name,
-          ':language_id' => $this->getDefaultLanguage()
-        ]);
+        $STH->execute([':filter_id' => $filter_id, ':filter_group_id' => $filter_group_id, ':filter_name' => $filter_name, ':language_id' => $this->default_language_id]);
 
         return $filter_id;
       } else {
@@ -153,5 +202,33 @@ class OpenCart implements CRM {
    */
   private function getDefaultLanguage(): int {
     return intval($this->db->query("SELECT language_id FROM oc_language ORDER BY sort_order LIMIT 1")->fetchColumn());
+  }
+
+  /**
+   * @param int $default_language_id
+   */
+  public function setDefaultLanguageId(int $default_language_id) {
+    $this->default_language_id = $default_language_id;
+  }
+
+  /**
+   * @param array $stock_statuses ['true' => int (в наличии), 'false' => int (не в наличии)]
+   */
+  public function setStockStatuses(array $stock_statuses) {
+    if (isset($stock_statuses['true'], $stock_statuses['false']) && is_int($stock_statuses['true']) && is_int($stock_statuses['false'])) {
+      $this->stock_statuses = $stock_statuses;
+    }
+  }
+
+  /**
+   * @param int $quantity
+   * @return int
+   */
+  private function getStockStatus(int $quantity): int {
+    if ($quantity > 0) {
+      return $this->stock_statuses['true'];
+    } else {
+      return $this->stock_statuses['false'];
+    }
   }
 }

@@ -86,7 +86,7 @@ class Integration {
           unset($all_images[$image_sn]);
         }
 
-        $product_data = $this->oc->getProductData($product['code'], ['id', 'status', 'manufacturer_id']);
+        $product_data = $this->oc->getProductData($product['code'], ['id', 'status', 'price', 'sku', 'quantity', 'price']);
 
         if ($product["isactive"] == "false" && empty($product_data['status'])) {
           continue;
@@ -103,20 +103,18 @@ class Integration {
           foreach ($item->Prices->price as $price) {
             $price = $price->attributes();
             if ($price['pricename'] == $this->default_pirce_type) {
-              $product['price'] = (string)$price['pricevalue'];
+              $product['price'] = floatval($price['pricevalue']);
             }
           }
         }
 
         $categories = explode('/', $product['category']);
-        $product_categories = [];
-        $main_category_id = $parent_category_id = 0;
+        $product['main_category_id'] = $parent_category_id = 0;
         foreach ($categories as $category) {
           $category = trim($category);
           if (!empty($category)) {
             $category_id = $this->oc->getCategoryId($category, $parent_category_id, true);
-            $product_categories[] = $category_id;
-            $main_category_id = $category_id;
+            $product['main_category_id'] = $category_id;
             $parent_category_id = $category_id;
           }
         }
@@ -124,12 +122,33 @@ class Integration {
         if (empty($product_data['id'])) {
           $this->oc->addProduct($product);
         } else {
+          //удалим не измененные поля из массива
+          $this->checkFields($product, $product_data);
+
           $this->oc->updateProduct($product_data['id'], $product);
         }
       }
     }
 
     $this->setXmlSuccess();
+  }
+
+  private function checkFields(array &$new_data, array $old_data) {
+    if (empty($product['filters'])) {
+      unset($product['filters']);
+    }
+    if ($new_data['isactive'] == 'true' && !empty($old_data['status'])) {
+      unset($new_data['isactive']);
+    }
+    if ($new_data['guid'] == $old_data['sku']) {
+      unset($new_data['guid']);
+    }
+    if (intval($new_data['stock']) == $old_data['quantity']) {
+      unset($new_data['stock']);
+    }
+    if ($new_data['price'] == $old_data['price']) {
+      unset($new_data['price']);
+    }
   }
 
   /**
