@@ -185,7 +185,7 @@ class OpenCart implements CRM {
         $STH = $this->db->prepare("INSERT INTO oc_category (image, parent_id, top, `column`, `status`, date_added, date_modified) VALUES ('', :parent_id, 1, 1, 1, CURRENT_TIME, CURRENT_TIME)");
         $STH->execute([':parent_id' => $parent_id]);
         $last_insert_id = $this->db->lastInsertId('category_id');
-        $STH = $this->db->prepare("INSERT INTO oc_category_description (category_id, language_id, `name`) VALUES (:category_id, :language_id, :category_name)");
+        $STH = $this->db->prepare("INSERT INTO oc_category_description SET category_id = :category_id, language_id = :language_id, `name` = :category_name, description = '', meta_title = '', meta_description = '', meta_keyword = ''");
         $STH->execute([':category_id' => $last_insert_id, ':category_name' => $name, ':language_id' => $this->default_language_id]);
 
         return $last_insert_id;
