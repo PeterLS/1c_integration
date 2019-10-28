@@ -309,6 +309,13 @@ class Integration {
   }
 
   /**
+   * @return array
+   */
+  public function getErrors(): array {
+    return $this->errors;
+  }
+
+  /**
    * @param string $string
    */
   private function setXmlError(string $string) {
@@ -331,7 +338,7 @@ class Integration {
    * @return bool
    */
   private function checkSettingsBeforeImport(): bool {
-    if (empty($this->import_dir) || empty($this->dir_image) || is_null($this->oc)) {
+    if (empty($this->import_dir) || empty($this->image_dir) || is_null($this->oc)) {
       $this->setError('Некорректные настройки модуля импорта.');
       return false;
     } else {
