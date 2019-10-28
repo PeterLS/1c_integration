@@ -64,7 +64,7 @@ class OpenCart implements CRM {
           $product_data[$k] = $v;
           break;
         case 'image':
-          $image = implode('/image/', $product_data[$k]);
+          $image = explode('/image/', $data[$k]);
           $product_data[$k] = $image[count($image)-1];
           break;
       }
