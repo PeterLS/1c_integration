@@ -67,7 +67,7 @@ class Integration {
    * @param int|NULL $end_date - метка Unix
    * @return bool
    */
-  public function getOrders(string $auth_key, int $start_date = NULL, int $end_date = NULL) {
+  public function getOrders(string $auth_key, int $start_date = NULL, int $end_date = NULL): bool {
     if (!$this->checkAuthKey($auth_key)) {
       return FALSE;
     }
@@ -91,7 +91,8 @@ class Integration {
     $xmlstr .= '<Orders>';
 
     foreach ($orders as $order) {
-      $xmlstr .= '<Order Delivery="' . $order['shipping'] . '" Data="' . $order['date_added'] . '" Number="' . $order['id'] . '" Description="' . $order['comment'] . '" Coupon="' . $order['coupon'] . '" Paid="' . empty($order['paid']) ? 'false' : 'true' . '">';
+      $paid = empty($order['paid']) ? 'false' : 'true';
+      $xmlstr .= '<Order Delivery="' . $order['shipping'] . '" Data="' . $order['date_added'] . '" Number="' . $order['id'] . '" Description="' . $order['comment'] . '" Coupon="' . $order['coupon'] . '" Paid="' . $paid . '">';
       $xmlstr .= '<Client FIO="' . $order['customer_name'] . '" Phone="' . $order['telephone'] . '" Email="' . $order['email'] . '" />';
 
       $xmlstr .= '<Goods>';
@@ -104,7 +105,8 @@ class Integration {
 
     $xmlstr .= '</Orders>';
 
-    return $this->printXML($xmlstr);
+    echo $this->printXML($xmlstr);
+    return TRUE;
   }
 
   private function load($xml_file) {
