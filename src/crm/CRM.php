@@ -40,4 +40,6 @@ interface CRM {
   public function getCategoryId(string $name, int $parent_id = 0, bool $add_if_empty = false): int;
 
   public function getFilterId(string $filter_group_name, string $filter_name, bool $add_if_empty = false): int;
+
+  public function getOrders(int $start_date, int $end_date): array;
 }

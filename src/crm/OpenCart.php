@@ -312,4 +312,40 @@ class OpenCart implements CRM {
     $name = str_replace(" ", "-", $name); // заменяем пробелы знаком минус
     return $name; // возвращаем результат
   }
+
+  public function getOrders(int $start_date, int $end_date): array {
+    $STH = $this->db->prepare("SELECT (IF((o.shipping_code = 'pickup.pickup'), 'Самовывоз', concat(o.shipping_country, ' ', o.shipping_city, ' ', o.shipping_address_1, ' ', o.shipping_address_2))) shipping,
+          o.date_added,
+          o.order_id id,
+          o.comment,
+          (IF((c.code IS NOT NULL), c.discount, '')) coupon,
+          (IF((o.order_status_id = :paid_status_id), 1, 0)) paid,
+          concat(o.firstname, ' ', o.lastname) customer_name,
+          o.telephone,
+          o.email
+        FROM oc_order o
+          LEFT JOIN oc_coupon_history ch ON o.order_id = ch.order_id
+          LEFT JOIN oc_coupon c ON c.coupon_id = ch.coupon_id
+        WHERE cast(o.date_added AS DATE) BETWEEN :start_date AND :end_date");
+    $STH->execute([
+      ':paid_status_id' => 9, ':start_date' => date('Y-m-d', $start_date), ':end_date' => date('Y-m-d', $end_date)
+    ]);
+    $orders = $STH->fetchAll(PDO::FETCH_ASSOC);
+    $STH = $this->db->prepare("SELECT p.sku guid, p.model code, op.quantity, op.price, total FROM oc_order_product op, oc_product p WHERE order_id = :order_id AND op.product_id = p.product_id");
+    foreach ($orders as &$order) {
+      $STH->execute([':order_id' => $order['id']]);
+      $products = $STH->fetchAll(PDO::FETCH_ASSOC);
+      if (!empty($order['coupon'])) {
+        $order['coupon'] = floatval($order['coupon']);
+        foreach ($products as &$product) {
+          $product['price'] = $product['price'] - $product['price'] / 100 * $order['coupon'];
+          $product['discount'] = $product['total'] / 100 * $order['coupon'];
+          $product['total'] -= $product['discount'];
+        }
+      }
+      $order['products'] = $products;
+    }
+
+    return $orders;
+  }
 }

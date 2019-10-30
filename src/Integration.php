@@ -24,41 +24,87 @@ class Integration {
   /**
    * @return bool
    */
-  public function startImport() { //from 1C
-    if (!$this->checkSettingsBeforeImport()) {
-      return false;
+  public function startImport(string $auth_key) { //from 1C
+    if (!$this->checkSettingsBeforeImport() || !$this->checkAuthKey($auth_key)) {
+      return FALSE;
     }
 
     $zip_file = $this->getLastFile($this->import_dir, 'zip');
 
-    if ($zip_file !== false) {
+    if ($zip_file !== FALSE) {
       $zip = new ZipArchive;
       $sh_zip = $zip->open($zip_file);
-      if ($sh_zip === true) {
+      if ($sh_zip === TRUE) {
         if ($zip->extractTo($this->image_dir) === TRUE) {
           $zip->close();
           //unlink($zip_file);
 
           $xml_file = $this->getLastFile($this->import_dir, 'xml');
-          if ($xml_file !== false) {
+          if ($xml_file !== FALSE) {
             return $this->load($xml_file);
           } else {
-            return false;
+            return FALSE;
           }
         } else {
           $zip->close();
           unlink($zip_file);
           $this->setError('Не удалось распаковать архив. Пожалуйста, попробуйте сделать выгрузку снова.');
-          return false;
+          return FALSE;
         }
       } else {
         unlink($zip_file);
         $this->setError('Не удалось открыть архив. Пожалуйста, попробуйте сделать выгрузку снова.');
-        return false;
+        return FALSE;
       }
     }
 
-    return false;
+    return FALSE;
+  }
+
+  /**
+   * @param string $auth_key
+   * @param int|NULL $start_date - метка Unix
+   * @param int|NULL $end_date - метка Unix
+   * @return bool
+   */
+  public function getOrders(string $auth_key, int $start_date = NULL, int $end_date = NULL) {
+    if (!$this->checkAuthKey($auth_key)) {
+      return FALSE;
+    }
+
+    if (is_null($start_date)) {
+      $start_date = strtotime(date('Y-m-d 00:00:00'));
+    }
+    if (is_null($end_date)) {
+      $end_date = strtotime(date('Y-m-d 23:59:59'));
+    }
+
+    if ($start_date > $end_date) {
+      $temp = $end_date;
+      $end_date = $start_date;
+      $start_date = $temp;
+      unset($temp);
+    }
+
+    $orders = $this->oc->getOrders($start_date, $end_date);
+    $xmlstr = '<?xml version="1.0" encoding="UTF-8"?>';
+    $xmlstr .= '<Orders>';
+
+    foreach ($orders as $order) {
+      $xmlstr .= '<Order Delivery="' . $order['shipping'] . '" Data="' . $order['date_added'] . '" Number="' . $order['id'] . '" Description="' . $order['comment'] . '" Coupon="' . $order['coupon'] . '" Paid="' . empty($order['paid']) ? 'false' : 'true' . '">';
+      $xmlstr .= '<Client FIO="' . $order['customer_name'] . '" Phone="' . $order['telephone'] . '" Email="' . $order['email'] . '" />';
+
+      $xmlstr .= '<Goods>';
+      foreach ($order['products'] as $product) {
+        $xmlstr .= '<Item Guid="' . $product['guid'] . '" Code="' . $product['code'] . '" Quantity="' . $product['quantity'] . '" Price="' . $product['price'] . '" Summ="' . $product['total'] . '" Discont="' . $product['discount'] . '" />';
+      }
+      $xmlstr .= '</Goods>';
+      $xmlstr .= '</Order>';
+    }
+
+    $xmlstr .= '</Orders>';
+
+    return $this->printXML($xmlstr);
   }
 
   private function load($xml_file) {
@@ -78,7 +124,7 @@ class Integration {
         $product['description'] = htmlspecialchars(str_replace('$', '<br/>', $product['description']));
 
         $code = explode('-', $product['code']);
-        $product['code'] = $code[count($code)-1];
+        $product['code'] = $code[count($code) - 1];
         unset($code);
 
         $product['image'] = $this->default_image;
@@ -101,7 +147,7 @@ class Integration {
         $product['filters'] = [];
         foreach ($item->filters->filter as $filter) {
           $filter = $filter->attributes();
-          $product['filters'][] = $this->oc->getFilterId($filter['filtername'], $filter['filtervalue'], true);
+          $product['filters'][] = $this->oc->getFilterId($filter['filtername'], $filter['filtervalue'], TRUE);
         }
 
         $product['price'] = 0;
@@ -119,7 +165,7 @@ class Integration {
         foreach ($categories as $category) {
           $category = trim($category);
           if (!empty($category)) {
-            $category_id = $this->oc->getCategoryId($category, $parent_category_id, true);
+            $category_id = $this->oc->getCategoryId($category, $parent_category_id, TRUE);
             $product['main_category_id'] = $category_id;
             $parent_category_id = $category_id;
           }
@@ -162,8 +208,8 @@ class Integration {
    */
   private function getImages(): array {
     $fn = [];
-    if (($open_dir = opendir($this->image_dir)) !== false) {
-      while (($filename = readdir($open_dir)) !== false) {
+    if (($open_dir = opendir($this->image_dir)) !== FALSE) {
+      while (($filename = readdir($open_dir)) !== FALSE) {
         if ($filename == '.' || $filename == '..' || $filename == 'current') {
           continue;
         }
@@ -200,9 +246,9 @@ class Integration {
   public function setDbParams(array $db_params) {
     if (!empty($db_params['host']) && !empty($db_params['name']) && !empty($db_params['user']) && isset($db_params['password'])) {
       $this->db_params = $db_params;
-      return true;
+      return TRUE;
     } else {
-      return false;
+      return FALSE;
     }
   }
 
@@ -214,10 +260,10 @@ class Integration {
     try {
       $oc = 'PeterLS\\crm\\' . $oc;
       $this->oc = new $oc($this->db_params);
-      return true;
+      return TRUE;
     } catch (Exception $e) {
       $this->setError($e);
-      return false;
+      return FALSE;
     }
   }
 
@@ -240,6 +286,15 @@ class Integration {
    */
   public function setAuthKey(string $auth_key) {
     $this->auth_key = $auth_key;
+  }
+
+  private function checkAuthKey(string $auth_key): bool {
+    if ($auth_key === $this->auth_key) {
+      return TRUE;
+    } else {
+      $this->setError('Неверный ключ авторизации');
+      return FALSE;
+    }
   }
 
   /**
@@ -273,11 +328,11 @@ class Integration {
     $dir = $this->replaceSlashes($dir);
 
     $open_dir = opendir($dir);
-    if ($open_dir === false) {
+    if ($open_dir === FALSE) {
       $this->setError('Невозможно открыть директорию ' . $dir);
-      return false;
+      return FALSE;
     } else {
-      while (($filename = readdir($open_dir)) !== false) {
+      while (($filename = readdir($open_dir)) !== FALSE) {
         if ($filename == '.' || $filename == '..' || $filename == 'current') {
           continue;
         }
@@ -299,7 +354,7 @@ class Integration {
       } else {
         if ($file_type === 'zip') {
           $this->setError('Отсутствует ZIP-архив.');
-          return false;
+          return FALSE;
         } else {
           $this->setXmlError('Отсутствует файл выгрузки');
         }
@@ -350,9 +405,9 @@ class Integration {
   private function checkSettingsBeforeImport(): bool {
     if (empty($this->import_dir) || empty($this->image_dir) || is_null($this->oc)) {
       $this->setError('Некорректные настройки модуля импорта.');
-      return false;
+      return FALSE;
     } else {
-      return true;
+      return TRUE;
     }
   }
 }
