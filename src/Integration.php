@@ -126,6 +126,20 @@ class Integration {
     }
   }
 
+  public function quantityUpdate(array $data): bool {
+    if (empty($data['guid']) || !isset($data['count']) || empty($data['h'])) {
+      $this->setXmlError('Не указаны обязательные параметры');
+      return FALSE;
+    }
+    if ($data['h'] != md5('guid='.$data['guid'].'&count='.$data['count'].$this->auth_key)) {
+      $this->setXmlError('Не верный ключ авторизации');
+      return FALSE;
+    }
+
+    $this->oc->updateProduct($data['guid'], ['stock' => $data['count']]);
+    return true;
+  }
+
   private function loadUsers(string $xml_file) {
     ini_set("memory_limit", "512M");
     ini_set("max_execution_time", 36000);
@@ -190,7 +204,9 @@ class Integration {
           $product[$k] = (string)$v;
         }
 
-        $product['description'] = htmlspecialchars(str_replace('$', '<br/>', $product['description']));
+        if (empty($product['guid'])) {
+          continue;
+        }
 
         $code = explode('-', $product['code']);
         $product['code'] = $code[count($code) - 1];
@@ -207,12 +223,13 @@ class Integration {
           unset($all_images[$product['code']]);
         }
 
-        $product_data = $this->oc->getProductData($product['code'], ['id', 'status', 'price', 'sku', 'quantity', 'price']);
+        $product_data = $this->oc->getProductData($product['guid'], ['id', 'status', 'price', 'quantity']);
 
         if ($product["isactive"] == "false" && empty($product_data['status'])) {
           continue;
         }
 
+        $product['description'] = htmlspecialchars(str_replace('$', '<br/>', $product['description']));
         $product['filters'] = [];
         foreach ($item->filters->filter as $filter) {
           $filter = $filter->attributes();
@@ -240,13 +257,12 @@ class Integration {
           }
         }
 
-        if (empty($product_data['id'])) {
+        if (empty($product_data)) {
           $this->oc->addProduct($product);
         } else {
           //удалим не измененные поля из массива
           $this->checkFields($product, $product_data);
-
-          $this->oc->updateProduct($product_data['id'], $product);
+          $this->oc->updateProduct($product['guid'], $product);
         }
       }
     }
@@ -260,9 +276,6 @@ class Integration {
     }
     if ($new_data['isactive'] == 'true' && !empty($old_data['status'])) {
       unset($new_data['isactive']);
-    }
-    if ($new_data['guid'] == $old_data['guid']) {
-      unset($new_data['guid']);
     }
     if (intval($new_data['stock']) == $old_data['stock']) {
       unset($new_data['stock']);

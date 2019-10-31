@@ -20,25 +20,23 @@ class OpenCart implements CRM {
   }
 
   /**
-   * @param $model - модель продукта
+   * @param string $sku - guid
    * @param array $data - столбцы, которые нужно вернуть; по умолчанию все
    * @return array
    */
-  public function getProductData($model, array $data = []): array {
-    $STH = $this->db->prepare("SELECT *, product_id AS id, sku AS guid, quantity AS stock FROM oc_product WHERE model = :model LIMIT 1");
-    $STH->execute([':model' => $model]);
-    $row = ($STH->fetchAll(PDO::FETCH_ASSOC));
+  public function getProductData(string $sku, array $data = []): array {
+    $STH = $this->db->prepare("SELECT *, product_id AS id, quantity AS stock FROM oc_product WHERE sku = :sku");
+    $STH->execute([':sku' => $sku]);
+    $row = $STH->fetchAll(PDO::FETCH_ASSOC);
     if (empty($row)) {
       return [];
-    }
-    else {
+    } else {
       $row = $row[0];
     }
 
     if (empty($data)) {
       return $row;
-    }
-    else {
+    } else {
       $result = [];
       foreach ($row as $k => $v) {
         if (in_array($k, $data)) {
@@ -49,13 +47,10 @@ class OpenCart implements CRM {
     }
   }
 
-  public function updateProduct(int $id, array $data) {
+  public function updateProduct(int $sku, array $data) {
     $product_data = [];
     foreach ($data as $k => $v) {
       switch ($k) {
-        case 'guid':
-          $product_data['sku'] = $v;
-          break;
         case 'stock':
           $product_data['quantity'] = intval($v);
           break;
@@ -82,7 +77,7 @@ class OpenCart implements CRM {
       $sql = "UPDATE oc_product SET ";
       $count = 1;
       foreach ($product_data as $k => $v) {
-        $sql .= "`$k` = :$k ";
+        $sql .= "`$k` = :$k";
         if ($count == count($product_data)) {
           $sql .= ' ';
         }
@@ -91,11 +86,10 @@ class OpenCart implements CRM {
         }
         $count++;
       }
-      $sql .= "WHERE product_id = :product_id";
+      $sql .= "WHERE sku = :sku";
 
-      $product_data['product_id'] = $id;
-      $STH = $this->db->prepare($sql);
-      $STH->execute($product_data);
+      $product_data['sku'] = $sku;
+      $this->db->prepare($sql)->execute($product_data);
     }
     unset($product_data, $sql);
 
@@ -107,32 +101,36 @@ class OpenCart implements CRM {
       $product_description_data['description'] = addslashes($data['description']);
     }
 
-    if (!empty($product_description_data)) {
-      $sql = "UPDATE oc_product_description SET ";
-      foreach ($product_description_data as $k => $v) {
-        $sql .= "`$k` = :$k ";
+    if (!empty($product_description_data) || !empty($data['filters']) || !empty($data['main_category_id'])) {
+      $product_id = $this->getProductData($sku, ['id']);
+
+      if (!empty($product_description_data)) {
+        $sql = "UPDATE oc_product_description SET ";
+        foreach ($product_description_data as $k => $v) {
+          $sql .= "`$k` = :$k ";
+        }
+        $sql .= "WHERE product_id = :product_id AND language_id = :language_id";
+
+        $product_description_data['product_id'] = $product_id;
+        $product_description_data['language_id'] = $this->default_language_id;
+        $this->db->prepare($sql)->execute($product_description_data);
       }
-      $sql .= "WHERE product_id = :product_id AND language_id = :language_id";
+      unset($product_description_data);
 
-      $product_description_data['product_id'] = $id;
-      $product_description_data['language_id'] = $this->default_language_id;
-      $STH = $this->db->prepare($sql)->execute($product_description_data);
-    }
-    unset($product_description_data);
+      if (!empty($data['filters'])) {
+        $STH = $this->db->prepare("INSERT IGNORE INTO oc_product_filter VALUES (:product_id, :filter_id)");
+        foreach ($data['filters'] as $filter_id) {
+          $STH->execute([':product_id' => $product_id, ':filter_id' => $filter_id]);
+        }
+      }
 
-    if (!empty($data['filters'])) {
-      $STH = $this->db->prepare("INSERT IGNORE INTO oc_product_filter VALUES (:product_id, :filter_id)");
-      foreach ($data['filters'] as $filter_id) {
-        $STH->execute([':product_id' => $id, ':filter_id' => $filter_id]);
+      if (!empty($data['main_category_id'])) {
+        $this->db->prepare("INSERT IGNORE INTO oc_product_to_category (product_id, category_id) VALUES (:product_id, :main_category_id)")->execute([
+          ':product_id' => $product_id, ':main_category_id' => $data['main_category_id']
+        ]);
       }
     }
 
-    if (!empty($data['main_category_id'])) {
-      $STH = $this->db->prepare("INSERT IGNORE INTO oc_product_to_category (product_id, category_id) VALUES (:product_id, :main_category_id)");
-      $STH->execute([
-        ':product_id' => $id, ':main_category_id' => $data['main_category_id']
-      ]);
-    }
   }
 
   public function addProduct(array $data) {

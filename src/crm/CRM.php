@@ -12,11 +12,11 @@ interface CRM {
   public function __construct(array $db_params);
 
   /**
-   * @param $ident - принимает код продукта из 1с
+   * @param string $guid
    * @param array $fields - необязательный; если заданы значения возвращает только запрошенные поля
    * @return array - массив с данными или пустой массив
    */
-  public function getProductData($ident, array $fields = []): array;
+  public function getProductData(string $guid, array $fields = []): array;
 
   /**
    * @param int $id - идентификатор продукта
