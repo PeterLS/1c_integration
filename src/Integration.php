@@ -137,7 +137,11 @@ class Integration {
 
     foreach ($xml->Users->Item as $item) {
       foreach ($item->attributes() as $k => $v) {
-        $user[$k] = $v;
+        if (in_array($k, ['firstname', 'lastname', 'telephone', 'email', 'date_added'])) {
+          $user[$k] = (string)$v;
+        } elseif (in_array($k, ['sale'])) {
+          $user[$k] = floatval($v);
+        }
       }
 
       if (empty($user['telephone']) || !preg_match('/^\+\d{11}$/i', $user['telephone'])) {
@@ -162,8 +166,6 @@ class Integration {
       }
       if (empty($user['sale'])) {
         $user['sale'] = 0;
-      } else {
-        $user['sale'] = floatval($user['sale']);
       }
 
       $this->oc->updateUser($user, true);
