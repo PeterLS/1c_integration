@@ -1,4 +1,4 @@
-**Example** 1c.php in the root of the site:
+##Example 1c.php in the root of the site:
 
 ```php
 require_once __DIR__ . '/vendor/autoload.php';
@@ -31,3 +31,12 @@ if(!empty($int->getErrors()) && !empty($_GET['debug'])) {
   var_dump($int->getErrors());
 }
 ```
+
+##Then, URL addresses:
+
+- For import from 1C to Site: http://site.ru/1c.php?autoload=123&action=import
+- For export orders from Site to 1C: http://site.ru/1c.php?autoload=123&action=get_orders.<br/>
+If parameters date_from and date_to are not sent, system will return a list of orders for today.<br/>
+Optional parameters can be added:
+    1. date_from (today default)
+    2. date_to (today default)
