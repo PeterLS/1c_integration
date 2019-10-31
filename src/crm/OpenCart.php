@@ -374,8 +374,14 @@ class OpenCart implements CRM {
         $this->db->prepare("INSERT INTO oc_customer SET firstname = :firstname, lastname = :lastname, email = :email, telephone = :telephone, date_added = :date_added, sale = :sale")->execute($data);
       }
     } else {
-      $data['customer_id'] = $user_id;
-      $this->db->prepare("UPDATE oc_customer SET firstname = :firstname, lastname = :lastname, sale = :sale, email = :email, telephone = :telephone WHERE customer_id = :customer_id")->execute($data);
+      $this->db->prepare("UPDATE oc_customer SET firstname = :firstname, lastname = :lastname, sale = :sale, email = :email, telephone = :telephone WHERE customer_id = :customer_id")->execute([
+        ':firstname' => $data['firstname'],
+        ':lastname' => $data['lastname'],
+        ':sale' => $data['sale'],
+        ':email' => $data['email'],
+        ':telephone' => $data['telephone'],
+        ':customer_id' => $user_id
+      ]);
     }
   }
 

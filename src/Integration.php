@@ -169,8 +169,9 @@ class Integration {
       }
 
       $this->oc->updateUser($user, true);
-      $this->setXmlSuccess();
     }
+
+    $this->setXmlSuccess();
   }
 
   private function load($xml_file) {
