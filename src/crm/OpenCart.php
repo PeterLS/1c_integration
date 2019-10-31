@@ -11,7 +11,7 @@ class OpenCart implements CRM {
   private $default_language_id = 1;
 
   public function __construct(array $db_params) {
-    $this->db = new PDO("mysql:host={$db_params['host']};dbname={$db_params['name']}", $db_params['user'], $db_params['password']);
+    $this->db = new PDO("mysql:host={$db_params['host']};dbname={$db_params['name']};charset=UTF8", $db_params['user'], $db_params['password']);
     $this->default_language_id = $this->getDefaultLanguage();
   }
 
