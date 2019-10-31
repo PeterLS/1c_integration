@@ -365,6 +365,8 @@ class OpenCart implements CRM {
 
     if (!empty($user_id_email) && !empty($user_id_tel) && $user_id_email != $user_id_tel) {
       $user_id = $this->mergeUsers($user_id_tel, $user_id_email);
+    } else {
+      $user_id = $user_id_email;
     }
 
     if (empty($user_id)) {
