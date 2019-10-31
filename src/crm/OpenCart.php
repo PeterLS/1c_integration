@@ -47,7 +47,7 @@ class OpenCart implements CRM {
     }
   }
 
-  public function updateProduct(int $sku, array $data) {
+  public function updateProduct(string $sku, array $data) {
     $product_data = [];
     foreach ($data as $k => $v) {
       switch ($k) {

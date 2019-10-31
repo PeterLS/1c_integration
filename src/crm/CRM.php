@@ -23,7 +23,7 @@ interface CRM {
    * @param array $data
    * @return void
    */
-  public function updateProduct(int $id, array $data);
+  public function updateProduct(string $id, array $data);
 
   /**
    * @param array $data
