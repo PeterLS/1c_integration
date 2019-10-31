@@ -22,7 +22,8 @@ class Integration {
   private $errors = [];
 
   /**
-   * @return bool
+   * @param string $auth_key
+   * @return bool|void
    */
   public function startImport(string $auth_key) { //from 1C
     if (!$this->checkSettingsBeforeImport() || !$this->checkAuthKey($auth_key)) {
@@ -37,7 +38,7 @@ class Integration {
       if ($sh_zip === TRUE) {
         if ($zip->extractTo($this->image_dir) === TRUE) {
           $zip->close();
-          //unlink($zip_file);
+          unlink($zip_file);
 
           $xml_file = $this->getLastFile($this->import_dir, 'xml');
           if ($xml_file !== FALSE) {
@@ -65,9 +66,9 @@ class Integration {
    * @param string $auth_key
    * @param int|NULL $start_date - метка Unix
    * @param int|NULL $end_date - метка Unix
-   * @return bool
+   * @return bool|void
    */
-  public function getOrders(string $auth_key, int $start_date = NULL, int $end_date = NULL): bool {
+  public function getOrders(string $auth_key, int $start_date = NULL, int $end_date = NULL) {
     if (!$this->checkAuthKey($auth_key)) {
       return FALSE;
     }
@@ -106,7 +107,68 @@ class Integration {
     $xmlstr .= '</Orders>';
 
     echo $this->printXML($xmlstr);
-    return TRUE;
+  }
+
+  /**
+   * @param string $auth_key
+   * @return bool|void
+   */
+  public function importUsers(string $auth_key) {
+    if (!$this->checkAuthKey($auth_key)) {
+      return FALSE;
+    }
+
+    $xml_file = $this->getLastFile($this->import_dir, 'xml');
+    if ($xml_file !== FALSE) {
+      return $this->loadUsers($xml_file);
+    } else {
+      return FALSE;
+    }
+  }
+
+  private function loadUsers(string $xml_file) {
+    ini_set("memory_limit", "512M");
+    ini_set("max_execution_time", 36000);
+
+    $contents = file_get_contents($xml_file);
+    $xml = new SimpleXMLElement($contents);
+    unset($contents);
+    unlink($xml_file);
+
+    foreach ($xml->Users->Item as $item) {
+      foreach ($item->attributes() as $k => $v) {
+        $user[$k] = $v;
+      }
+
+      if (empty($user['telephone']) || !preg_match('/^\+\d{11}$/i', $user['telephone'])) {
+        $user['telephone'] = NULL;
+      }
+      if (empty($user['email']) || !filter_var($user['email'], FILTER_VALIDATE_EMAIL)) {
+        $user['email'] = NULL;
+      }
+      if (is_null($user['email']) && is_null($user['telephone'])) {
+        continue;
+      }
+      if (empty($user['date_added'])) {
+        $user['date_added'] = time();
+      } else {
+        $user['date_added'] = strtotime($user['date_added']);
+      }
+      if (empty($user['firstname'])) {
+        $user['firstname'] = '';
+      }
+      if (empty($user['lastname'])) {
+        $user['lastname'] = '';
+      }
+      if (empty($user['sale'])) {
+        $user['sale'] = 0;
+      } else {
+        $user['sale'] = floatval($user['sale']);
+      }
+
+      $this->oc->updateUser($user, true);
+      $this->setXmlSuccess();
+    }
   }
 
   private function load($xml_file) {
@@ -115,6 +177,8 @@ class Integration {
 
     $contents = file_get_contents($xml_file);
     $xml = new SimpleXMLElement($contents);
+    unset($contents);
+    unlink($xml_file);
 
     if (!empty($xml->Goods->Item)) {
       $all_images = $this->getImages();

@@ -348,4 +348,106 @@ class OpenCart implements CRM {
 
     return $orders;
   }
+
+  public function updateUser(array $data, bool $add_if_empty = false) {
+    $user_id = 0;
+    $data['date_added'] = date('Y-m-d H:i:s', $data['date_added']);
+    if (!is_null($data['telephone'])) {
+      $STH = $this->db->prepare("SELECT customer_id FROM oc_customer WHERE telephone = :telephone");
+      $STH->execute([':telephone' => $data['telephone']]);
+      $user_id_tel = intval($STH->fetchColumn());
+    }
+    if (!is_null($data['email'])) {
+      $STH = $this->db->prepare("SELECT customer_id FROM oc_customer WHERE email = :email");
+      $STH->execute([':email' => $data['email']]);
+      $user_id_email = intval($STH->fetchColumn());
+    }
+
+    if (!empty($user_id_email) && !empty($user_id_tel) && $user_id_email != $user_id_tel) {
+      $user_id = $this->mergeUsers($user_id_tel, $user_id_email);
+    }
+
+    if (empty($user_id)) {
+      if ($add_if_empty) {
+        $this->db->prepare("INSERT INTO oc_customer SET firstname = :firstname, lastname = :lastname, email = :email, telephone = :telephone, date_added = :date_added, sale = :sale")->execute($data);
+      }
+    } else {
+      $data['customer_id'] = $user_id;
+      $this->db->prepare("UPDATE oc_customer SET firstname = :firstname, lastname = :lastname, sale = :sale, email = :email, telephone = :telephone WHERE customer_id = :customer_id")->execute($data);
+    }
+    return;
+  }
+
+  /**
+   * Объединяет двух пользователей
+   * @param int $user_id_1
+   * @param int $user_id_2
+   * @return int
+   */
+  private function mergeUsers(int $user_id_1, int $user_id_2): int {
+    $STH = $this->db->prepare("SELECT * FROM oc_customer WHERE customer_id = :user_id");
+    $STH->execute([':user_id' => $user_id_1]);
+    $user1 = $STH->fetchAll(PDO::FETCH_ASSOC);
+    $STH->execute([':user_id' => $user_id_2]);
+    $user2 = $STH->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($user1['status'] != 1) {
+      $this->removeUser($user_id_1);
+      return $user_id_2;
+    }
+    if ($user2['status'] != 1) {
+      $this->removeUser($user_id_2);
+      return $user_id_1;
+    }
+
+    if (empty($user1['email']) && !empty($user2['email'])) {
+      $user1['email'] = $user2['email'];
+    }
+
+    if (empty($user1['telephone']) && !empty($user2['telephone'])) {
+      $user1['telephone'] = $user2['telephone'];
+    }
+
+    if (empty($user1['sale']) && !empty($user2['sale'])) {
+      $user1['sale'] = $user2['sale'];
+    }
+
+    if (empty($user1['firstname']) && !empty($user2['firstname'])) {
+      $user1['firstname'] = $user2['firstname'];
+    }
+
+    if (empty($user1['lastname']) && !empty($user2['lastname'])) {
+      $user1['lastname'] = $user2['lastname'];
+    }
+
+    $this->db->prepare("UPDATE oc_customer SET firstname = :firstname, lastname = :lastname, sale = :sale, email = :email, telephone = :telephone WHERE customer_id = :customer_id")->execute($user1);
+    $this->db->prepare("UPDATE oc_customer_activity SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_customer_affiliate SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_customer_approval SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_customer_history SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_customer_ip SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_customer_online SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_customer_reward SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_customer_search SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_customer_transaction SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_customer_wishlist SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_address SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_order SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_return SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_review SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_cart SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+    $this->db->prepare("UPDATE oc_review_about_shop SET customer_id = :new_customer_id WHERE customer_id = :old_customer_id")->execute([':new_customer_id' => $user_id_1, ':old_customer_id' => $user_id_2]);
+
+    $this->removeUser($user_id_2);
+    return $user_id_1;
+  }
+
+  /**
+   * @param int $user_id_2
+   * @return void
+   */
+  private function removeUser(int $user_id_2) {
+    $this->db->prepare("DELETE FROM oc_customer WHERE customer_id = :id")->execute([':id' => $user_id_2]);
+    return;
+  }
 }

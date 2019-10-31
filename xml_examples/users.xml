@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DOC number="1" date="29.10.2019">
+    <Users>
+        <!--
+        email - не обязаельно. Валидируется.
+        telephone - не обязательно. формат +79521547881.
+        Должны быть заполнены либо email, либо telephone
+
+        firstname, lastname - не обязательно
+        sale - не обязательно, float
+        date_added - не обязательно. формат: YYYY-MM-DD
+        -->
+        <Item email="peterls@ya.ru" firstname="Слободянюк" lastname="Петр" telephone="+79521547881" sale="6" date_added="2019-01-20"/>
+        <Item email="example@domain.com" firstname="Иванов" lastname="Иван" telephone="" sale="1" date_added="2019-10-31"/>
+    </Users>
+</DOC>
