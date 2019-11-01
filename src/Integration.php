@@ -285,6 +285,8 @@ class Integration {
         //производитель
         if (!empty($product['mnfc'])) {
           $product['manufacturer_id'] = $this->oc->getManufacturerId($product['mnfc'], TRUE);
+        } else {
+          $product['manufacturer_id'] = 0;
         }
 
         $categories = explode('/', $product['category']);

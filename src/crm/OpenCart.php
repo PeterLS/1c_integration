@@ -107,8 +107,14 @@ class OpenCart implements CRM {
 
       if (!empty($product_description_data)) {
         $sql = "UPDATE oc_product_description SET ";
+        $count = 1;
         foreach ($product_description_data as $k => $v) {
-          $sql .= "`$k` = :$k ";
+          $sql .= "`$k` = :$k";
+          if ($count == count($product_description_data)) {
+            $sql .= ' ';
+          } else {
+            $sql .= ', ';
+          }
         }
         $sql .= "WHERE product_id = :product_id AND language_id = :language_id";
 
