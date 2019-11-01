@@ -259,7 +259,7 @@ class Integration {
           unset($all_images[$product['code']]);
         }
 
-        $product_data = $this->oc->getProductData($product['guid'], ['id', 'status', 'price', 'quantity']);
+        $product_data = $this->oc->getProductData($product['guid'], ['id', 'status', 'price', 'quantity', 'manufacturer_id']);
 
         if ($product["isactive"] == "false" && empty($product_data['status'])) {
           continue;
@@ -280,6 +280,11 @@ class Integration {
               $product['price'] = floatval($price['pricevalue']);
             }
           }
+        }
+
+        //производитель
+        if (!empty($product['mnfc'])) {
+          $product['manufacturer_id'] = $this->oc->getManufacturerId($product['mnfc'], TRUE);
         }
 
         $categories = explode('/', $product['category']);
@@ -318,6 +323,9 @@ class Integration {
     }
     if ($new_data['price'] == $old_data['price']) {
       unset($new_data['price']);
+    }
+    if ($new_data['manufacturer_id'] == $old_data['manufacturer_id']) {
+      unset($new_data['manufacturer_id']);
     }
   }
 

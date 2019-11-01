@@ -57,14 +57,16 @@ class OpenCart implements CRM {
         case 'isactive':
           $product_data['status'] = ($v == 'true' ? 1 : 0);
           break;
-        case 'price':
-          $product_data[$k] = $v;
-          break;
         case 'image':
           $image = explode('/image/', $data[$k]);
           $product_data[$k] = $image[count($image) - 1];
           unset($image);
           break;
+        case 'price':
+        case 'manufacturer_id':
+          $product_data[$k] = $v;
+          break;
+
       }
     }
     if (!empty($product_data)) {
@@ -80,8 +82,7 @@ class OpenCart implements CRM {
         $sql .= "`$k` = :$k";
         if ($count == count($product_data)) {
           $sql .= ' ';
-        }
-        else {
+        } else {
           $sql .= ', ';
         }
         $count++;
@@ -137,8 +138,12 @@ class OpenCart implements CRM {
     $image = explode('/image/', $data['image']);
     $data['image'] = $image[count($image) - 1];
     unset($image);
-    $STH = $this->db->prepare("INSERT INTO oc_product SET model = :model, sku = :sku, upc = '', ean = '', jan = '', isbn = '', mpn = '', location = '', quantity = :quantity, stock_status_id = :stock_status_id, image = :image, manufacturer_id = 1, price = :price, tax_class_id = 0, status = 1, date_added = current_date, date_modified = current_date, date_available = current_date");
-    $STH->execute([':model' => $data['code'], ':sku' => $data['guid'], ':quantity' => $data['stock'], ':stock_status_id' => $this->getStockStatus($data['stock']), ':image' => $data['image'], ':price' => $data['price']]);
+    $STH = $this->db->prepare("INSERT INTO oc_product SET model = :model, sku = :sku, upc = '', ean = '', jan = '', isbn = '', mpn = '', location = '', quantity = :quantity, stock_status_id = :stock_status_id, image = :image, manufacturer_id = :manufacturer_id, price = :price, tax_class_id = 0, status = 1, date_added = current_date, date_modified = current_date, date_available = current_date");
+    $STH->execute([
+      ':model' => $data['code'], ':sku' => $data['guid'], ':quantity' => $data['stock'],
+      ':stock_status_id' => $this->getStockStatus($data['stock']), ':image' => $data['image'], ':price' => $data['price'],
+      ':manufacturer_id' => (empty($data['manufacturer_id']) ? 1 : $data['manufacturer_id'])
+    ]);
     $product_id = $this->db->lastInsertId('product_id');
 
     $STH = $this->db->prepare("INSERT INTO oc_product_description SET product_id = :product_id, language_id = :language_id, `name` = :product_name, `description` = :product_description, tag = '', meta_title = '', meta_description = '', meta_keyword = ''");
@@ -454,5 +459,23 @@ class OpenCart implements CRM {
   private function removeUser(int $user_id_2) {
     $this->db->prepare("DELETE FROM oc_customer WHERE customer_id = :id")->execute([':id' => $user_id_2]);
     return;
+  }
+
+  public function getManufacturerId(string $name, bool $add_if_empty = false): int {
+    $STH = $this->db->prepare("SELECT manufacturer_id id FROM oc_manufacturer WHERE `name` = :name");
+    $STH->execute([':name' => $name]);
+    $row = $STH->fetch(PDO::FETCH_ASSOC);
+    if (empty($row)) {
+      if ($add_if_empty) {
+        $this->db->prepare("INSERT INTO oc_manufacturer SET `name` = :name, image = NULL")->execute([':name' => $name]);
+        $manufacturer_id = $this->db->lastInsertId('manufacturer_id');
+        $this->db->prepare("INSERT INTO oc_manufacturer_to_store SET manufacturer_id = :manufacturer_id, store_id = 0")->execute([':manufacturer_id' => $manufacturer_id]);
+        return $manufacturer_id;
+      } else {
+        return 0;
+      }
+    } else {
+      return intval($row[0]['id']);
+    }
   }
 }
