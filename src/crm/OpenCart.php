@@ -120,7 +120,8 @@ class OpenCart implements CRM {
 
         $product_description_data['product_id'] = $product_id;
         $product_description_data['language_id'] = $this->default_language_id;
-        $this->db->prepare($sql)->execute($product_description_data);
+        $STH = $this->db->prepare($sql);
+        $STH->execute($product_description_data);
       }
       unset($product_description_data);
 
