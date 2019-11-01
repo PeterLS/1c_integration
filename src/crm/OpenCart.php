@@ -461,10 +461,10 @@ class OpenCart implements CRM {
     return;
   }
 
-  public function getManufacturerId(string $name, bool $add_if_empty = false): int {
+  public function getManufacturerId(string $name, bool $add_if_empty = FALSE): int {
     $STH = $this->db->prepare("SELECT manufacturer_id id FROM oc_manufacturer WHERE `name` = :name");
     $STH->execute([':name' => $name]);
-    $row = $STH->fetch(PDO::FETCH_ASSOC);
+    $row = $STH->fetchAll(PDO::FETCH_ASSOC);
     if (empty($row)) {
       if ($add_if_empty) {
         $this->db->prepare("INSERT INTO oc_manufacturer SET `name` = :name, image = NULL")->execute([':name' => $name]);
