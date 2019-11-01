@@ -127,7 +127,7 @@ class Integration {
 
     $xml_file = $this->getLastFile($this->import_dir, 'xml');
     if ($xml_file !== FALSE) {
-      return $this->loadUsers($xml_file);
+      $this->loadUsers($xml_file);
     } else {
       return FALSE;
     }
@@ -145,6 +145,29 @@ class Integration {
 
     $this->oc->updateProduct($data['guid'], ['stock' => $data['count']]);
     return true;
+  }
+
+
+  /**
+   * @param $phone
+   * @return mixed|string|null
+   */
+  private function formattedPhone($phone) {
+    $phone = (string) $phone;
+    $phone = str_replace('(', '', $phone);
+    $phone = str_replace(')', '', $phone);
+    $phone = str_replace('-', '', $phone);
+    $phone = preg_replace('/\s+/i', '', $phone);
+
+    if (preg_match('/^8\d{10}$/i', $phone)) {
+      return '+7' . substr($phone, 1);
+    } elseif (preg_match('/^7\d{10}$/i', $phone)) {
+      return '+' . $phone;
+    } elseif (preg_match('/^\+7\d{10}$/i', $phone)) {
+      return $phone;
+    }
+
+    return NULL;
   }
 
   private function loadUsers(string $xml_file) {
@@ -167,8 +190,10 @@ class Integration {
         }
       }
 
-      if (empty($user['telephone']) || !preg_match('/^\+\d{11}$/i', $user['telephone'])) {
+      if (empty($user['telephone'])) {
         $user['telephone'] = NULL;
+      } else {
+        $user['telephone'] = $this->formattedPhone($user['telephone']);
       }
       if (empty($user['email']) || !filter_var($user['email'], FILTER_VALIDATE_EMAIL)) {
         $user['email'] = NULL;
