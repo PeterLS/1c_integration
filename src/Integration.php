@@ -266,6 +266,7 @@ class Integration {
         }
 
         $product['description'] = htmlspecialchars(str_replace('$', '<br/>', $product['description']));
+        $product['stock'] = empty($product['stock'] ? 0 : intval($product['stock']));
         $product['filters'] = [];
         foreach ($item->filters->filter as $filter) {
           $filter = $filter->attributes();
@@ -318,7 +319,7 @@ class Integration {
     if ($new_data['isactive'] == 'true' && !empty($old_data['status'])) {
       unset($new_data['isactive']);
     }
-    if (intval($new_data['stock']) == $old_data['stock']) {
+    if ($new_data['stock'] == $old_data['stock']) {
       unset($new_data['stock']);
     }
     if ($new_data['price'] == $old_data['price']) {

@@ -207,12 +207,10 @@ class OpenCart implements CRM {
         ]);
 
         return $category_id;
-      }
-      else {
+      } else {
         return 0;
       }
-    }
-    else {
+    } else {
       return intval($row[0]['id']);
     }
   }
