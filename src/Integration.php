@@ -18,6 +18,7 @@ class Integration {
   private $default_pirce_type = 'Розничная';
 
   private $db_params = ['host' => 'localhost', 'name' => '', 'user' => 'root', 'password' => '', 'port' => 0];
+  private $unlink_files = true;
 
   private $errors = [];
 
@@ -38,7 +39,9 @@ class Integration {
       if ($sh_zip === TRUE) {
         if ($zip->extractTo($this->image_dir) === TRUE) {
           $zip->close();
-          unlink($zip_file);
+          if ($this->unlink_files) {
+            unlink($zip_file);
+          }
 
           $xml_file = $this->getLastFile($this->import_dir, 'xml');
           if ($xml_file !== FALSE) {
@@ -48,12 +51,16 @@ class Integration {
           }
         } else {
           $zip->close();
-          unlink($zip_file);
+          if ($this->unlink_files) {
+            unlink($zip_file);
+          }
           $this->setError('Не удалось распаковать архив. Пожалуйста, попробуйте сделать выгрузку снова.');
           return FALSE;
         }
       } else {
-        unlink($zip_file);
+        if ($this->unlink_files) {
+          unlink($zip_file);
+        }
         $this->setError('Не удалось открыть архив. Пожалуйста, попробуйте сделать выгрузку снова.');
         return FALSE;
       }
@@ -147,7 +154,9 @@ class Integration {
     $contents = file_get_contents($xml_file);
     $xml = new SimpleXMLElement($contents);
     unset($contents);
-    unlink($xml_file);
+    if ($this->unlink_files) {
+      unlink($xml_file);
+    }
 
     foreach ($xml->Users->Item as $item) {
       foreach ($item->attributes() as $k => $v) {
@@ -195,7 +204,9 @@ class Integration {
     $contents = file_get_contents($xml_file);
     $xml = new SimpleXMLElement($contents);
     unset($contents);
-    unlink($xml_file);
+    if ($this->unlink_files) {
+      unlink($xml_file);
+    }
 
     if (!empty($xml->Goods->Item)) {
       $all_images = $this->getImages();
@@ -491,5 +502,12 @@ class Integration {
     } else {
       return TRUE;
     }
+  }
+
+  /**
+   * @param bool $unlink_files
+   */
+  public function setUnlinkFiles(bool $unlink_files) {
+    $this->unlink_files = $unlink_files;
   }
 }
