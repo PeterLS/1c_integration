@@ -259,14 +259,13 @@ class Integration {
           unset($all_images[$product['code']]);
         }
 
-        $product_data = $this->oc->getProductData($product['guid'], ['id', 'status', 'price', 'quantity', 'manufacturer_id']);
+        $product_data = $this->oc->getProductData($product['guid'], ['id', 'status', 'price', 'stock', 'manufacturer_id']);
 
         if ($product["isactive"] == "false" && empty($product_data['status'])) {
           continue;
         }
 
         $product['description'] = htmlspecialchars(str_replace('$', '<br/>', $product['description']));
-        $product['stock'] = empty($product['stock'] ? 0 : intval($product['stock']));
         $product['filters'] = [];
         foreach ($item->filters->filter as $filter) {
           $filter = $filter->attributes();
@@ -313,8 +312,8 @@ class Integration {
   }
 
   private function checkFields(array &$new_data, array $old_data) {
-    if (empty($product['filters'])) {
-      unset($product['filters']);
+    if (empty($new_data['filters'])) {
+      unset($new_data['filters']);
     }
     if ($new_data['isactive'] == 'true' && !empty($old_data['status'])) {
       unset($new_data['isactive']);
