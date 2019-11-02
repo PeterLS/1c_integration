@@ -61,7 +61,7 @@ class Integration {
 
     $xml_file = $this->getLastFile($this->import_dir, 'xml');
     if ($xml_file !== FALSE) {
-      return $this->load($xml_file, $zip_file);
+      $this->load($xml_file);
     } else {
       return FALSE;
     }
@@ -220,7 +220,7 @@ class Integration {
     $this->setXmlSuccess();
   }
 
-  private function load($xml_file, $zip_images) {
+  private function load($xml_file) {
     ini_set("memory_limit", "512M");
     ini_set("max_execution_time", 36000);
 
