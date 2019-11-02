@@ -103,7 +103,7 @@ class OpenCart implements CRM {
     }
 
     if (!empty($product_description_data) || !empty($data['filters']) || !empty($data['main_category_id'])) {
-      $product_id = $this->getProductData($sku, ['id']);
+      $product_id = intval(($this->getProductData($sku, ['id']))['id']);
 
       if (!empty($product_description_data)) {
         $sql = "UPDATE oc_product_description SET ";
@@ -118,7 +118,7 @@ class OpenCart implements CRM {
         }
         $sql .= "WHERE product_id = :product_id AND language_id = :language_id";
 
-        $product_description_data['product_id'] = intval($product_id['id']);
+        $product_description_data['product_id'] = $product_id;
         $product_description_data['language_id'] = $this->default_language_id;
         $this->db->prepare($sql)->execute($product_description_data);
       }
