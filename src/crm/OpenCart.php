@@ -118,7 +118,7 @@ class OpenCart implements CRM {
         }
         $sql .= "WHERE product_id = :product_id AND language_id = :language_id";
 
-        $product_description_data['product_id'] = $product_id;
+        $product_description_data['product_id'] = intval($product_id['id']);
         $product_description_data['language_id'] = $this->default_language_id;
         $this->db->prepare($sql)->execute($product_description_data);
       }
