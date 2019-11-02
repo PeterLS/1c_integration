@@ -42,13 +42,6 @@ class Integration {
           if ($this->unlink_files) {
             unlink($zip_file);
           }
-
-          $xml_file = $this->getLastFile($this->import_dir, 'xml');
-          if ($xml_file !== FALSE) {
-            return $this->load($xml_file);
-          } else {
-            return FALSE;
-          }
         } else {
           $zip->close();
           if ($this->unlink_files) {
@@ -66,7 +59,12 @@ class Integration {
       }
     }
 
-    return FALSE;
+    $xml_file = $this->getLastFile($this->import_dir, 'xml');
+    if ($xml_file !== FALSE) {
+      return $this->load($xml_file, $zip_file);
+    } else {
+      return FALSE;
+    }
   }
 
   /**
@@ -222,7 +220,7 @@ class Integration {
     $this->setXmlSuccess();
   }
 
-  private function load($xml_file) {
+  private function load($xml_file, $zip_images) {
     ini_set("memory_limit", "512M");
     ini_set("max_execution_time", 36000);
 
