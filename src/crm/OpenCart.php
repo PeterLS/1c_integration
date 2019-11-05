@@ -128,7 +128,7 @@ class OpenCart implements CRM {
 
       if (!empty($data['filters'])) {
         $STH = $this->db->prepare("INSERT IGNORE INTO `oc_product_filter` VALUES (:product_id, :filter_id)");
-        $STH1 = $this->db->prepare("INSERT IGNORE INTO `oc_category_filter` SET `category_id` = (SELECT `category_id` FROM `oc_product_to_category` WHERE `product_id` = :product_id) AND `filter_id` = :filter_id");
+        $STH1 = $this->db->prepare("INSERT IGNORE INTO `oc_category_filter` (`category_id`, `filter_id`) VALUES ((SELECT `category_id` FROM `oc_product_to_category` WHERE `product_id` = :product_id), :filter_id)");
         foreach ($data['filters'] as $filter_id) {
           $STH->execute([':product_id' => $product_id, ':filter_id' => $filter_id]);
           $STH1->execute([':product_id' => $product_id, ':filter_id' => $filter_id]);
