@@ -255,7 +255,7 @@ class OpenCart implements CRM {
         $this->db->prepare("INSERT INTO oc_filter_group SET sort_order = 0")->execute();
         $filter_group_id = $this->db->lastInsertId('filter_group_id');
         $STH = $this->db->prepare("INSERT INTO oc_filter_group_description VALUES (:filter_group_id, :language_id, :filter_name)");
-        $STH->execute([':filter_group_id' => $filter_group_id, ':filter_name' => $filter_name, ':language_id' => $this->default_language_id]);
+        $STH->execute([':filter_group_id' => $filter_group_id, ':filter_name' => $filter_group_name, ':language_id' => $this->default_language_id]);
       } else {
         return 0;
       }
