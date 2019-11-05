@@ -102,9 +102,11 @@ class OpenCart implements CRM {
       $product_description_data['description'] = addslashes($data['description']);
     }
 
-    if (!empty($product_description_data) || !empty($data['filters']) || !empty($data['main_category_id'])) {
-      $product_id = intval(($this->getProductData($sku, ['id']))['id']);
+    $product_id = intval(($this->getProductData($sku, ['id']))['id']);
+    $this->db->prepare("DELETE FROM oc_product_filter WHERE product_id = :product_id")->execute([':product_id' => $product_id]);
+    $this->db->prepare("DELETE FROM oc_category_filter WHERE category_id = (SELECT `category_id` FROM `oc_product_to_category` WHERE `product_id` = :product_id)")->execute([':product_id' => $product_id]);
 
+    if (!empty($product_description_data) || !empty($data['filters']) || !empty($data['main_category_id'])) {
       if (!empty($product_description_data)) {
         $sql = "UPDATE oc_product_description SET ";
         $count = 1;
@@ -128,17 +130,11 @@ class OpenCart implements CRM {
         $STH = $this->db->prepare("INSERT IGNORE INTO oc_product_filter VALUES (:product_id, :filter_id)");
         foreach ($data['filters'] as $filter_id) {
           $STH->execute([':product_id' => $product_id, ':filter_id' => $filter_id]);
-          if (empty($data['main_category_id'])) {
-            $this->db->prepare("INSERT IGNORE INTO `oc_category_filter` SET `category_id` = (SELECT `category_id` FROM `oc_product_to_category` WHERE `product_id` = :product_id) AND `filter_id` = :filter_id")->execute([
-              ':filter_id' => $filter_id,
-              ':product_id' => $product_id
-            ]);
-          } else {
-            $this->db->prepare("INSERT IGNORE INTO `oc_category_filter` SET `category_id` = :category_id AND `filter_id` = :filter_id")->execute([
-              ':category_id' => $data['main_category_id'],
-              ':filter_id' => $filter_id
-            ]);
-          }
+
+          $this->db->prepare("INSERT IGNORE INTO `oc_category_filter` SET `category_id` = (SELECT `category_id` FROM `oc_product_to_category` WHERE `product_id` = :product_id) AND `filter_id` = :filter_id")->execute([
+            ':filter_id' => $filter_id,
+            ':product_id' => $product_id
+          ]);
         }
       }
 
