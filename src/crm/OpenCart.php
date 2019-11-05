@@ -128,6 +128,18 @@ class OpenCart implements CRM {
         $STH = $this->db->prepare("INSERT IGNORE INTO oc_product_filter VALUES (:product_id, :filter_id)");
         foreach ($data['filters'] as $filter_id) {
           $STH->execute([':product_id' => $product_id, ':filter_id' => $filter_id]);
+          if (empty($data['main_category_id'])) {
+            $this->db->prepare("INSERT IGNORE INTO oc_category_filter SET category_id = (SELECT category_id FROM oc_product_to_category WHERE product_id = :product_id) AND filter_id = :filter_id")->execute([
+              ':category_id' => $data['main_category_id'],
+              ':filter_id' => $filter_id,
+              ':product_id' => $product_id
+            ]);
+          } else {
+            $this->db->prepare("INSERT IGNORE INTO oc_category_filter SET category_id = :category_id AND filter_id = :filter_id")->execute([
+              ':category_id' => $data['main_category_id'],
+              ':filter_id' => $filter_id
+            ]);
+          }
         }
       }
 
@@ -164,6 +176,10 @@ class OpenCart implements CRM {
       $STH = $this->db->prepare("INSERT INTO oc_product_filter VALUES (:product_id, :filter_id)");
       foreach ($data['filters'] as $filter_id) {
         $STH->execute([':product_id' => $product_id, ':filter_id' => $filter_id]);
+        $this->db->prepare("INSERT IGNORE INTO oc_category_filter SET category_id = :category_id AND filter_id = :filter_id")->execute([
+          ':category_id' => $data['main_category_id'],
+          ':filter_id' => $filter_id
+        ]);
       }
     }
 
@@ -228,27 +244,32 @@ class OpenCart implements CRM {
    * @return int
    */
   public function getFilterId(string $filter_group_name, string $filter_name, bool $add_if_empty = FALSE): int {
-    $STH = $this->db->prepare("SELECT filter_group_id FROM oc_filter_group_description WHERE `name` = :filter_group_name LIMIT 1");
-    $STH->execute([':filter_group_name' => $filter_group_name]);
+    $STH = $this->db->prepare("SELECT filter_group_id FROM oc_filter_group_description WHERE `name` = :filter_group_name AND language_id = :language_id LIMIT 1");
+    $STH->execute([
+      ':filter_group_name' => $filter_group_name,
+      ':language_id' => $this->default_language_id
+    ]);
     $filter_group = $STH->fetchAll(PDO::FETCH_ASSOC);
     if (empty($filter_group)) {
       if ($add_if_empty) {
-        $this->db->exec("INSERT INTO oc_filter_group VALUES (NULL, 0)");
-        $last_insert_id = $this->db->lastInsertId('filter_group_id');
-        $STH = $this->db->prepare("INSERT INTO oc_filter_group_description VALUES (:filter_group_id, :language_id, :filter_name)");
-        $STH->execute([':filter_group_id' => $last_insert_id, ':filter_name' => $filter_name, ':language_id' => $this->default_language_id]);
+        $this->db->prepare("INSERT INTO oc_filter_group SET sort_order = 0")->execute();
         $filter_group_id = $this->db->lastInsertId('filter_group_id');
-      }
-      else {
+        $STH = $this->db->prepare("INSERT INTO oc_filter_group_description VALUES (:filter_group_id, :language_id, :filter_name)");
+        $STH->execute([':filter_group_id' => $filter_group_id, ':filter_name' => $filter_name, ':language_id' => $this->default_language_id]);
+      } else {
         return 0;
       }
     }
     else {
-      $filter_group_id = $filter_group[0]['$filter_group_id'];
+      $filter_group_id = $filter_group[0]['filter_group_id'];
     }
 
-    $STH = $this->db->prepare("SELECT filter_id FROM oc_filter_description WHERE name = :filter_name AND filter_group_id = :filter_group_id LIMIT 1");
-    $STH->execute([':filter_name' => $filter_name, ':filter_group_id' => $filter_group_id]);
+    $STH = $this->db->prepare("SELECT filter_id FROM oc_filter_description WHERE `name` = :filter_name AND filter_group_id = :filter_group_id AND language_id = :language_id LIMIT 1");
+    $STH->execute([
+      ':filter_name' => $filter_name,
+      ':filter_group_id' => $filter_group_id,
+      ':language_id' => $this->default_language_id
+    ]);
     $filter = $STH->fetchAll(PDO::FETCH_ASSOC);
     if (empty($filter)) {
       if ($add_if_empty) {
@@ -259,8 +280,7 @@ class OpenCart implements CRM {
         $STH->execute([':filter_id' => $filter_id, ':filter_group_id' => $filter_group_id, ':filter_name' => $filter_name, ':language_id' => $this->default_language_id]);
 
         return $filter_id;
-      }
-      else {
+      } else {
         return 0;
       }
     }
