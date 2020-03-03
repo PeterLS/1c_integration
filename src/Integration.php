@@ -243,7 +243,7 @@ class Integration {
         }
 
         $code = explode('-', $product['code']);
-        $product['code'] = $code[count($code) - 1];
+        $product['code'] = trim($code[count($code) - 1]);
         unset($code);
 
         $product['image'] = $this->default_image;
