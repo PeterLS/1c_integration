@@ -64,7 +64,7 @@ class OpenCart implements CRM {
           break;
         case 'price':
         case 'manufacturer_id':
-          $product_data[$k] = $v;
+          $product_data[$k] = empty($v) ? 1 : $v;
           break;
 
       }
