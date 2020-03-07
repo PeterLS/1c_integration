@@ -24,14 +24,25 @@ class Integration {
 
   /**
    * @param string $auth_key
+   * @param string $xml_file_name
+   * @param string $zip_file_name
    * @return bool|void
    */
-  public function startImport(string $auth_key) { //from 1C
+  public function startImport(string $auth_key, $xml_file_name = '', $zip_file_name = '') { //from 1C
     if (!$this->checkSettingsBeforeImport() || !$this->checkAuthKey($auth_key)) {
       return FALSE;
     }
 
-    $zip_file = $this->getLastFile($this->import_dir, 'zip');
+    if (empty($zip_file_name)) {
+      $zip_file = $this->getLastFile($this->import_dir, 'zip');
+    } else {
+      if (file_exists($this->image_dir . '/' . $zip_file_name . '.zip')) {
+        $zip_file = $this->image_dir . '/' . $zip_file_name . '.zip';
+      } else {
+        $zip_file = FALSE;
+      }
+    }
+
 
     if ($zip_file !== FALSE) {
       $zip = new ZipArchive;
@@ -59,7 +70,16 @@ class Integration {
       }
     }
 
-    $xml_file = $this->getLastFile($this->import_dir, 'xml');
+    if (empty($xml_file_name)) {
+      $xml_file = $this->getLastFile($this->import_dir, 'xml');
+    } else {
+      if (file_exists($this->image_dir . '/' . $xml_file_name . '.zip')) {
+        $xml_file = $this->image_dir . '/' . $xml_file_name . '.zip';
+      } else {
+        $xml_file = FALSE;
+      }
+    }
+
     if ($xml_file !== FALSE) {
       $this->load($xml_file);
     } else {

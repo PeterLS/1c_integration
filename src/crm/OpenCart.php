@@ -25,7 +25,28 @@ class OpenCart implements CRM {
    * @return array
    */
   public function getProductData(string $sku, array $data = []): array {
-    $STH = $this->db->prepare("SELECT *, product_id AS id, quantity AS stock FROM oc_product WHERE sku = :sku");
+    if (empty($data)) {
+      $select_raw = '*';
+    } else {
+      $select_raw = '';
+      foreach ($data as $datum) {
+        switch ($datum) {
+          case 'id':
+            $select_raw .= 'product_id AS id, ';
+            break;
+          case 'stock':
+            $select_raw .= 'quantity AS stock, ';
+            break;
+          default:
+            $select_raw .= $datum . ', ';
+            break;
+        }
+      }
+
+      $select_raw = substr($select_raw, 0, -2);
+    }
+
+    $STH = $this->db->prepare("SELECT {$select_raw} FROM oc_product WHERE sku = :sku");
     $STH->execute([':sku' => $sku]);
     $row = $STH->fetchAll(PDO::FETCH_ASSOC);
     if (empty($row)) {
@@ -34,17 +55,7 @@ class OpenCart implements CRM {
       $row = $row[0];
     }
 
-    if (empty($data)) {
-      return $row;
-    } else {
-      $result = [];
-      foreach ($row as $k => $v) {
-        if (in_array($k, $data)) {
-          $result[$k] = $v;
-        }
-      }
-      return $result;
-    }
+    return $row;
   }
 
   public function updateProduct(string $sku, array $data) {
