@@ -517,7 +517,7 @@ class Integration {
     exit();
   }
 
-  public function setXmlSuccess() {
+  private function setXmlSuccess() {
     echo $this->printXML('<?xml version="1.0" encoding="UTF-8"?><error descr="">0</error>');
     exit();
   }
