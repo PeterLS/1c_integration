@@ -24,22 +24,14 @@ class Integration {
 
   /**
    * @param string $auth_key
-   * @param string $xml_file
-   * @param string $zip_file
    * @return bool|void
    */
-  public function startImport(string $auth_key, $xml_file = '', $zip_file = '') { //from 1C
+  public function startImport(string $auth_key) { //from 1C
     if (!$this->checkSettingsBeforeImport() || !$this->checkAuthKey($auth_key)) {
       return FALSE;
     }
 
-    if (empty($zip_file)) {
-      $zip_file = $this->getLastFile($this->import_dir, 'zip');
-    } else {
-      if (!file_exists($zip_file)) {
-        $zip_file = FALSE;
-      }
-    }
+    $zip_file = $this->getLastFile($this->import_dir, 'zip');
 
 
     if ($zip_file !== FALSE) {
@@ -68,13 +60,7 @@ class Integration {
       }
     }
 
-    if (empty($xml_file)) {
-      $xml_file = $this->getLastFile($this->import_dir, 'xml');
-    } else {
-      if (!file_exists($xml_file)) {
-        $xml_file = FALSE;
-      }
-    }
+    $xml_file = $this->getLastFile($this->import_dir, 'xml');
 
     if ($xml_file !== FALSE) {
       $this->load($xml_file);
@@ -465,7 +451,7 @@ class Integration {
    * @param string $file_type
    * @return bool|mixed
    */
-  public function getLastFile(string $dir, string $file_type) {
+  private function getLastFile(string $dir, string $file_type) {
     $lm = $fn = [];
     $dir = $this->replaceSlashes($dir);
 
