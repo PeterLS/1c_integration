@@ -4,12 +4,14 @@
 namespace PeterLS\Integration;
 
 use Exception;
+use PclZip;
 use SimpleXMLElement;
-use ZipArchive;
 
 class Integration {
   private $oc = NULL;
   private $auth_key = NULL;
+  private $shell_start = FALSE;
+  private $uri_delimeter = ''; // for example: proftomsk.ru in URI /var/www/proftomsk/data/www/proftomsk.ru/image/catalog/import
 
   private $export_dir = NULL;
   private $import_dir = NULL;
@@ -18,7 +20,7 @@ class Integration {
   private $default_pirce_type = 'Розничная';
 
   private $db_params = ['host' => 'localhost', 'name' => '', 'user' => 'root', 'password' => '', 'port' => 0];
-  private $unlink_files = true;
+  private $unlink_files = TRUE;
 
   private $errors = [];
 
@@ -44,28 +46,15 @@ class Integration {
     }
 
     if ($zip_file !== FALSE) {
-      $zip = new ZipArchive;
-      $sh_zip = $zip->open($zip_file);
-      if ($sh_zip === TRUE) {
-        if ($zip->extractTo($this->image_dir) === TRUE) {
-          $zip->close();
-          if ($this->unlink_files) {
-            unlink($zip_file);
-          }
-        } else {
-          $zip->close();
-          if ($this->unlink_files) {
-            unlink($zip_file);
-          }
-          $this->setError('Не удалось распаковать архив. Пожалуйста, попробуйте сделать выгрузку снова.');
-          return FALSE;
-        }
-      } else {
-        if ($this->unlink_files) {
-          unlink($zip_file);
-        }
-        $this->setError('Не удалось открыть архив. Пожалуйста, попробуйте сделать выгрузку снова.');
+      require_once __DIR__ . "/libs/pclzip.lib.php";
+      $archive = new PclZip($zip_file);
+      $result = $archive->extract(PCLZIP_OPT_PATH, $this->image_dir);
+      if ($result == 0) {
+        $this->setError('Не удалось распаковать архив. Пожалуйста, попробуйте сделать выгрузку снова.');
         return FALSE;
+      }
+      if ($this->unlink_files) {
+        unlink($zip_file);
       }
     }
 
@@ -155,13 +144,13 @@ class Integration {
       $this->setXmlError('Не указаны обязательные параметры');
       return FALSE;
     }
-    if ($data['h'] != md5('guid='.$data['guid'].'&count='.$data['count'].$this->auth_key)) {
+    if ($data['h'] != md5('guid=' . $data['guid'] . '&count=' . $data['count'] . $this->auth_key)) {
       $this->setXmlError('Не верный ключ авторизации');
       return FALSE;
     }
 
     $this->oc->updateProduct($data['guid'], ['stock' => $data['count']]);
-    return true;
+    return TRUE;
   }
 
 
@@ -170,7 +159,7 @@ class Integration {
    * @return mixed|string|null
    */
   private function formattedPhone($phone) {
-    $phone = (string) $phone;
+    $phone = (string)$phone;
     $phone = str_replace('(', '', $phone);
     $phone = str_replace(')', '', $phone);
     $phone = str_replace('-', '', $phone);
@@ -233,7 +222,7 @@ class Integration {
         $user['sale'] = 0;
       }
 
-      $this->oc->updateUser($user, true);
+      $this->oc->updateUser($user, TRUE);
     }
 
     $this->setXmlSuccess();
@@ -261,17 +250,17 @@ class Integration {
           continue;
         }
 
-        $code = explode('-', $product['code']);
-        $product['code'] = trim($code[count($code) - 1]);
-        unset($code);
-
         $product['image'] = $this->default_image;
 
         if (isset($all_images[$product['code']])) {
           if ($product['isactive'] == 'false') {
             unlink($all_images[$product['code']]);
           } else {
-            $product['image'] = $all_images[$product['code']];
+            if ($this->shell_start) {
+              $product['image'] = explode($this->uri_delimeter, $all_images[$product['code']])[1];
+            } else {
+              $product['image'] = $all_images[$product['code']];
+            }
           }
           unset($all_images[$product['code']]);
         }
@@ -359,13 +348,7 @@ class Integration {
           continue;
         }
 
-        $sn = explode('-', $filename);;
-        if (isset($sn[1])) {
-          $new_name = $sn[1];
-          rename($this->image_dir . '/' . $filename, $this->image_dir . '/' . $new_name);
-        } else {
-          $new_name = $filename;
-        }
+        $new_name = $filename;
         $fname = explode('.', $new_name);
         if (file_exists($this->image_dir . '/' . $fname[0] . '.jpg') && file_exists($this->image_dir . '/' . $fname[0] . '.png')) {
           if (filectime($this->image_dir . '/' . $fname[0] . '.jpg') > filectime($this->image_dir . '/' . $fname[0] . '.png')) {
@@ -561,5 +544,19 @@ class Integration {
    */
   public function setUnlinkFiles(bool $unlink_files) {
     $this->unlink_files = $unlink_files;
+  }
+
+  /**
+   * @param bool $shell_start
+   */
+  public function setSellStart(bool $shell_start) {
+    $this->shell_start = $shell_start;
+  }
+
+  /**
+   * @param string $uri_delimeter
+   */
+  public function setUriDelimeter(string $uri_delimeter) {
+    $this->uri_delimeter = $uri_delimeter;
   }
 }
