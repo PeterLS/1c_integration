@@ -549,7 +549,7 @@ class Integration {
   /**
    * @param bool $shell_start
    */
-  public function setSellStart(bool $shell_start) {
+  public function setShellStart(bool $shell_start) {
     $this->shell_start = $shell_start;
   }
 
