@@ -46,13 +46,8 @@ class Integration {
     }
 
     if ($zip_file !== FALSE) {
-      require_once __DIR__ . "/libs/pclzip.lib.php";
-      $archive = new PclZip($zip_file);
-      $result = $archive->extract(PCLZIP_OPT_PATH, $this->image_dir);
-      if ($result == 0) {
-        $this->setError('Не удалось распаковать архив. Пожалуйста, попробуйте сделать выгрузку снова.');
-        return FALSE;
-      }
+      exec("unzip -n {$zip_file} -d $this->image_dir");
+
       if ($this->unlink_files) {
         unlink($zip_file);
       }
@@ -283,7 +278,7 @@ class Integration {
           foreach ($item->Prices->price as $price) {
             $price = $price->attributes();
             if ($price['pricename'] == $this->default_pirce_type) {
-              $product['price'] = floatval($price['pricevalue']);
+              $product['price'] = (float)$price['pricevalue'];
             }
           }
         }
