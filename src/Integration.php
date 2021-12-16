@@ -31,7 +31,12 @@ class Integration {
    * @return bool|void
    */
   public function startImport(string $auth_key, string $xml_file_name = '', string $zip_file_name = '') { //from 1C
-    if (!$this->checkSettingsBeforeImport() || !$this->checkAuthKey($auth_key)) {
+    if (!$this->checkSettingsBeforeImport()) {
+      $this->setError('Неверно указаны первоначальные настройки!');
+      return FALSE;
+    }
+    if (!$this->checkAuthKey($auth_key)) {
+      $this->setError('Неверно указан ключ авторизации!');
       return FALSE;
     }
 
@@ -66,6 +71,7 @@ class Integration {
     if ($xml_file !== FALSE) {
       $this->load($xml_file);
     } else {
+      $this->setError('Не найден XML файл!');
       return FALSE;
     }
   }
