@@ -229,6 +229,9 @@ class Integration {
     $this->setXmlSuccess();
   }
 
+  /**
+   * @throws \Exception
+   */
   private function load($xml_file) {
     ini_set("memory_limit", "512M");
     ini_set("max_execution_time", 36000);
@@ -317,7 +320,9 @@ class Integration {
       }
     }
 
-    $this->setXmlSuccess();
+    if (!$this->shell_start) {
+      $this->setXmlSuccess();
+    }
   }
 
   private function checkFields(array &$new_data, array $old_data) {
